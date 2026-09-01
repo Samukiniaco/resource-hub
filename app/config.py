@@ -26,7 +26,7 @@ IMAGE_CACHE_DIR = CACHE_DIR / "image_cache"
 VORTEX_CONF_NAME = "vortex_launcher.conf"
 
 # --- Remote catalog ---
-DEFAULT_CATALOG_URL = "https://example.com/catalog.json"
+DEFAULT_CATALOG_URL = "https://raw.githubusercontent.com/Samukiniaco/resource-hub/master/data/catalog.json"
 SCHEMA_VERSION = 1
 REQUEST_TIMEOUT = 10  # seconds
 

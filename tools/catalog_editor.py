@@ -86,8 +86,17 @@ class CatalogEditor(tk.Tk):
         ttk.Button(top, text="Abrir…", command=self.open_dialog).pack(side="left", padx=2)
         ttk.Button(top, text="Salvar", command=self.save).pack(side="left", padx=2)
         ttk.Button(top, text="Salvar como…", command=self.save_as).pack(side="left", padx=2)
-        ttk.Button(top, text="Validar", command=self.validate).pack(side="left", padx=2)
-        ttk.Button(top, text="☁️ Publicar", command=self.publish_to_github, style="Accent.TButton").pack(side="left", padx=(8, 0))
+        ttk.Button(top, text="Validar", command=self.validate).pack(side="left", padx=4)
+        # Publicar — destaque proposital (não confundir com Validar/Salvar)
+        pub_frame = tk.Frame(top, bg="#e8f0fe", highlightbackground="#2f80ed", highlightthickness=1, bd=0)
+        pub_frame.pack(side="left", padx=(10, 0))
+        pub_btn = ttk.Button(pub_frame, text="  ☁️  PUBLICAR NO GITHUB  ", command=self.publish_to_github, style="Accent.TButton")
+        pub_btn.pack(padx=1, pady=1)
+        # tooltip simples via status
+        def _pub_enter(e): self.status.set("Publicar: faz git add/commit/push do catalog.json para atualizar TODO MUNDO (requer permissão de colaborador).")
+        def _pub_leave(e): self.status.set("Pronto.")
+        pub_btn.bind("<Enter>", _pub_enter)
+        pub_btn.bind("<Leave>", _pub_leave)
 
         # main notebook
         nb = ttk.Notebook(self)
