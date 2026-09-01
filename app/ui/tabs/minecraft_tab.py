@@ -3,32 +3,45 @@ from tkinter import ttk
 
 from app.models.catalog import Catalog
 from app.ui.components.card import ResourceCard
-from app.ui.styles import COLORS
-
-def _scrollable(parent: tk.Misc) -> tuple[ttk.Frame, tk.Canvas]:
-    canvas = tk.Canvas(parent, bg=COLORS["bg"], highlightthickness=0)
-    scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-    scroll_frame = ttk.Frame(canvas, style="TFrame")
-    canvas.configure(yscrollcommand=scrollbar.set)
-    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-    def _on_config(e):
-        canvas.configure(scrollregion=canvas.bbox("all"))
-    scroll_frame.bind("<Configure>", _on_config)
-    # mousewheel
-    def _on_wheel(e):
-        canvas.yview_scroll(int(-1*(e.delta/120)), "units")
-    canvas.bind_all("<MouseWheel>", _on_wheel)
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-    return scroll_frame, canvas
+from app.ui.components.scrollable import ScrollableFrame
+from app.ui.styles import COLORS, FONTS
 
 def build_minecraft_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Frame:
-    frame = ttk.Frame(notebook, style="TFrame", padding=8)
-    inner, _ = _scrollable(frame)
+    frame = ttk.Frame(notebook, style="TFrame", padding=0)
+    # header inside tab
+    header = ttk.Frame(frame, style="TFrame", padding=(12, 10, 12, 6))
+    header.pack(fill="x")
+    ttk.Label(header, text="Versões disponíveis", style="Section.TLabel").pack(side="left")
+    count = len(catalog.minecraft_versions) if catalog and catalog.minecraft_versions else 0
+    ttk.Label(header, text=f"{count} itens", style="Muted.TLabel", font=FONTS["small"]).pack(side="right")
+
+    sc = ScrollableFrame(frame)
+    sc.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+    inner = sc.inner
+
     if not catalog or not catalog.minecraft_versions:
-        ttk.Label(inner, text="Nenhuma versão de Minecraft disponível.", style="TLabel", foreground=COLORS["text_muted"]).pack(pady=40)
+        # empty state com ícone
+        empty = ttk.Frame(inner, style="Card.TFrame", padding=20)
+        empty.pack(fill="x", padx=12, pady=24)
+        try:
+            from pathlib import Path
+            from PIL import Image, ImageTk
+            p = Path(__file__).resolve().parent.parent.parent.parent / "assets" / "empty.png"
+            if p.exists():
+                img = Image.open(p)
+                tk_img = ImageTk.PhotoImage(img)
+                lbl = tk.Label(empty, image=tk_img, bg=COLORS["bg_card"], bd=0)
+                lbl.image = tk_img
+                lbl.pack(pady=(8, 12))
+        except Exception:
+            pass
+        ttk.Label(empty, text="Nenhuma versão de Minecraft disponível.", style="Card.TLabel", font=FONTS["subtitle"]).pack()
+        ttk.Label(empty, text="Tente atualizar o catálogo ou verifique o arquivo debug.", style="CardMuted.TLabel", font=FONTS["small"]).pack(pady=(4, 0))
         return frame
+
     for v in catalog.minecraft_versions:
         card = ResourceCard(inner, title=v.name, description=v.description, link=v.link, banner_url=v.banner, warning=v.warning)
-        card.pack(fill="x", pady=6, padx=6)
+        card.pack(fill="x", padx=12, pady=6)
+    # spacer final para não colar no fim
+    ttk.Frame(inner, style="TFrame", height=8).pack(fill="x")
     return frame

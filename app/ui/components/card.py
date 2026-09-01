@@ -1,7 +1,6 @@
-"""Reusable resource card: name, description, banner, warning, Open/Copy buttons."""
+"""Card polido — bordas suaves, banner, hover, sem glitch visual."""
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Optional
 
 from app.ui.styles import COLORS, FONTS
 from app.utils.browser import open_url, is_valid_http_url
@@ -11,94 +10,109 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-class ResourceCard(ttk.Frame):
-    def __init__(
-        self,
-        parent: tk.Misc,
-        title: str,
-        description: str = "",
-        link: str = "",
-        banner_url: str = "",
-        warning: str = "",
-        **kwargs,
-    ):
-        super().__init__(parent, style="Card.TFrame", padding=12, **kwargs)
+class ResourceCard(tk.Frame):
+    def __init__(self, parent, title: str, description: str = "", link: str = "", banner_url: str = "", warning: str = "", **kwargs):
+        super().__init__(parent, bg=COLORS["border"], bd=0, highlightthickness=0, **kwargs)
         self.link = link.strip() if link else ""
         self.banner_url = banner_url.strip() if banner_url else ""
 
-        # border effect via frame
-        self.configure(relief="flat", borderwidth=1)
+        # inner card fills outer with 1px border effect
+        self.card = tk.Frame(self, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
+        self.card.pack(fill="both", expand=True, padx=1, pady=1)
+        self.card.columnconfigure(0, weight=1)
 
-        # Layout: left content, right buttons? Use grid
-        self.columnconfigure(0, weight=1)
+        # header: dot + title
+        header = tk.Frame(self.card, bg=COLORS["bg_card"])
+        header.grid(row=0, column=0, sticky="ew", padx=14, pady=(12, 4))
+        dot_color = COLORS["accent"] if self.link and is_valid_http_url(self.link) else COLORS["border_light"]
+        tk.Label(header, text="●", fg=dot_color, bg=COLORS["bg_card"], font=("Segoe UI", 7)).pack(side="left", padx=(0, 8))
+        tk.Label(header, text=title, bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=FONTS["title"],
+                 wraplength=620, justify="left", anchor="w").pack(side="left", fill="x", expand=True)
 
-        # Title
-        ttk.Label(self, text=title, style="Card.TLabel", font=FONTS["title"], wraplength=680, justify="left").grid(row=0, column=0, sticky="w", pady=(0, 4))
-
-        # Description
+        # description
         if description:
-            ttk.Label(self, text=description, style="CardSecondary.TLabel", font=FONTS["body"], wraplength=680, justify="left").grid(row=1, column=0, sticky="w", pady=(0, 6))
+            tk.Label(self.card, text=description, bg=COLORS["bg_card"], fg=COLORS["text_secondary"],
+                     font=FONTS["body"], wraplength=620, justify="left", anchor="w").grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
         else:
-            ttk.Label(self, text="Sem descrição.", style="CardMuted.TLabel", font=FONTS["small"]).grid(row=1, column=0, sticky="w", pady=(0, 6))
+            tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
+                     font=FONTS["small"]).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
 
-        # Banner (async)
-        self.banner_label = ttk.Label(self, style="Card.TLabel", text="", anchor="center")
-        self.banner_label.grid(row=2, column=0, sticky="ew", pady=(0, 6))
+        # banner
+        self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
+        self.banner_label.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
         if self.banner_url:
-            self.banner_label.configure(text="Carregando banner...", font=FONTS["small"], foreground=COLORS["text_muted"])
+            self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
         else:
-            # no banner: hide label
             self.banner_label.grid_remove()
 
-        # Warning
+        # warning
         if warning:
-            warn_frame = tk.Frame(self, bg=COLORS["warning_bg"], highlightthickness=0)
-            warn_frame.grid(row=3, column=0, sticky="ew", pady=(0, 8))
-            tk.Label(warn_frame, text=f"⚠ {warning}", bg=COLORS["warning_bg"], fg=COLORS["warning_fg"], font=FONTS["warning"], wraplength=660, justify="left", padx=8, pady=6).pack(fill="x")
+            wf = tk.Frame(self.card, bg=COLORS["warning_bg"], highlightbackground=COLORS["warning_border"], highlightthickness=1, bd=0)
+            wf.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 10))
+            inner = tk.Frame(wf, bg=COLORS["warning_bg"])
+            inner.pack(fill="x", padx=8, pady=6)
+            tk.Label(inner, text="⚠  " + warning, bg=COLORS["warning_bg"], fg=COLORS["warning_fg"],
+                     font=FONTS["warning"], wraplength=560, justify="left", anchor="w").pack(fill="x")
 
-        # Buttons row
-        btn_frame = ttk.Frame(self, style="Card.TFrame")
-        btn_frame.grid(row=4, column=0, sticky="ew", pady=(4, 0))
-        btn_frame.columnconfigure(0, weight=1)
+        # separator
+        sep = tk.Frame(self.card, bg=COLORS["border"], height=1, bd=0, highlightthickness=0)
+        sep.grid(row=4, column=0, sticky="ew", padx=14, pady=(2, 10))
 
-        self.open_btn = ttk.Button(btn_frame, text="Abrir", style="Accent.TButton", command=self._on_open, width=12)
+        # buttons row
+        btn_frame = tk.Frame(self.card, bg=COLORS["bg_card"])
+        btn_frame.grid(row=5, column=0, sticky="ew", padx=14, pady=(0, 12))
+        left = tk.Frame(btn_frame, bg=COLORS["bg_card"])
+        left.pack(side="left")
+        right = tk.Frame(btn_frame, bg=COLORS["bg_card"])
+        right.pack(side="right", fill="x", expand=True)
+        # to have ttk buttons styled, need ttk parent with correct bg; use ttk.Frame inside tk.Frame
+        btn_box = ttk.Frame(left, style="Card.TFrame")
+        btn_box.pack(anchor="w")
+        self.open_btn = ttk.Button(btn_box, text=" Abrir ↗ ", style="Accent.TButton", command=self._on_open, width=11)
         self.open_btn.pack(side="left", padx=(0, 8))
-        self.copy_btn = ttk.Button(btn_frame, text="Copiar Link", style="Secondary.TButton", command=self._on_copy, width=12)
+        self.copy_btn = ttk.Button(btn_box, text="Copiar link", style="Secondary.TButton", command=self._on_copy, width=11)
         self.copy_btn.pack(side="left")
-
-        # Link preview (muted, single line)
-        if self.link:
-            preview = self.link if len(self.link) < 80 else self.link[:77] + "..."
-            ttk.Label(btn_frame, text=preview, style="CardMuted.TLabel", font=FONTS["small"]).pack(side="left", padx=(12, 0))
-        else:
+        if not self.link:
             self.open_btn.configure(state="disabled")
             self.copy_btn.configure(state="disabled")
-            ttk.Label(btn_frame, text="Sem link disponível", style="CardMuted.TLabel", font=FONTS["small"]).pack(side="left", padx=(12, 0))
+        # link preview
+        if self.link:
+            preview = self.link if len(self.link) <= 52 else self.link[:49] + "…"
+            tk.Label(right, text=preview, bg=COLORS["bg_card"], fg=COLORS["text_dim"], font=FONTS["mono"], anchor="e").pack(anchor="e", padx=(12, 0))
+        else:
+            tk.Label(right, text="sem link", bg=COLORS["bg_card"], fg=COLORS["text_dim"], font=FONTS["small"]).pack(anchor="e")
 
-        # hover effect
-        self.bind("<Enter>", lambda e: self.configure(style="Card.TFrame"))
-        # Use tk frame bg change for hover? Keep simple.
+        # hover
+        self.bind("<Enter>", self._on_enter, add="+")
+        self.bind("<Leave>", self._on_leave, add="+")
+        self.card.bind("<Enter>", self._on_enter, add="+")
+        self.card.bind("<Leave>", self._on_leave, add="+")
+
+    def _on_enter(self, e):
+        self.configure(bg=COLORS["border_light"])
+        self.card.configure(bg=COLORS["bg_card_hover"])
+
+    def _on_leave(self, e):
+        self.configure(bg=COLORS["border"])
+        self.card.configure(bg=COLORS["bg_card"])
 
     def _load_banner(self, url: str):
         def _cb(tk_img):
-            # must run on Tk thread
             def _apply():
                 try:
                     if tk_img is not None:
-                        self.banner_label.configure(image=tk_img, text="")
-                        self.banner_label.image = tk_img  # keep ref
+                        self.banner_label.configure(image=tk_img, text="", compound="center")
+                        self.banner_label.image = tk_img
                     else:
-                        self.banner_label.configure(text="Banner indisponível", image="")
+                        self.banner_label.configure(text="Banner indisponível", image="", fg=COLORS["text_muted"], font=FONTS["small"])
                 except tk.TclError:
                     pass
-            # schedule on main thread
             try:
                 self.after(0, _apply)
             except tk.TclError:
                 pass
-
-        fetch_image_async(url, _cb, max_size=(640, 160))
+        fetch_image_async(url, _cb, max_size=(620, 170))
 
     def _on_open(self):
         if not self.link:
@@ -116,9 +130,8 @@ class ResourceCard(ttk.Frame):
             return
         ok = copy_to_clipboard(self.winfo_toplevel(), self.link)
         if ok:
-            # brief feedback
             orig = self.copy_btn.cget("text")
-            self.copy_btn.configure(text="Copiado!")
-            self.after(1500, lambda: self.copy_btn.configure(text=orig))
+            self.copy_btn.configure(text="✓ Copiado!")
+            self.after(1400, lambda: self.copy_btn.configure(text=orig))
         else:
-            messagebox.showerror("Erro", "Falha ao copiar para a área de transferência.", parent=self)
+            messagebox.showerror("Erro", "Falha ao copiar.", parent=self)

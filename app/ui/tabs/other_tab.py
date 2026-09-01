@@ -3,27 +3,31 @@ from tkinter import ttk
 
 from app.models.catalog import Catalog
 from app.ui.components.card import ResourceCard
-from app.ui.styles import COLORS
-
-def _scrollable(parent: tk.Misc):
-    canvas = tk.Canvas(parent, bg=COLORS["bg"], highlightthickness=0)
-    scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-    scroll_frame = ttk.Frame(canvas, style="TFrame")
-    canvas.configure(yscrollcommand=scrollbar.set)
-    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-    scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-    return scroll_frame
+from app.ui.components.scrollable import ScrollableFrame
+from app.ui.styles import COLORS, FONTS
 
 def build_other_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Frame:
-    frame = ttk.Frame(notebook, style="TFrame", padding=8)
-    inner = _scrollable(frame)
+    frame = ttk.Frame(notebook, style="TFrame", padding=0)
+    header = ttk.Frame(frame, style="TFrame", padding=(12, 10, 12, 6))
+    header.pack(fill="x")
+    ttk.Label(header, text="Patches & extras", style="Section.TLabel").pack(side="left")
+    count = len(catalog.other) if catalog and catalog.other else 0
+    ttk.Label(header, text=f"{count} itens", style="Muted.TLabel", font=FONTS["small"]).pack(side="right")
+
+    sc = ScrollableFrame(frame)
+    sc.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+    inner = sc.inner
+
     if not catalog or not catalog.other:
-        ttk.Label(inner, text="Nenhum patch ou arquivo adicional.", style="TLabel", foreground=COLORS["text_muted"]).pack(pady=40)
+        empty = ttk.Frame(inner, style="Card.TFrame", padding=20)
+        empty.pack(fill="x", padx=12, pady=24)
+        ttk.Label(empty, text="Nenhum patch ou arquivo adicional.", style="Card.TLabel", font=FONTS["subtitle"]).pack()
+        ttk.Label(empty, text="Adicione entradas em 'other' no catálogo para aparecerem aqui.", style="CardMuted.TLabel", font=FONTS["small"]).pack(pady=(4, 0))
         return frame
+
     for o in catalog.other:
-        title = f"{o.name}  [{o.category}]" if o.category and o.category != "other" else o.name
+        title = f"{o.name}  ·  {o.category}" if o.category and o.category != "other" else o.name
         card = ResourceCard(inner, title=title, description=o.description, link=o.link, banner_url=o.banner, warning=o.warning)
-        card.pack(fill="x", pady=6, padx=6)
+        card.pack(fill="x", padx=12, pady=6)
+    ttk.Frame(inner, style="TFrame", height=8).pack(fill="x")
     return frame

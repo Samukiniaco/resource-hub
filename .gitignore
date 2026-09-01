@@ -12,5 +12,5 @@ data/catalog.tmp.json
 data/image_cache/
 data/resource_hub.log
 data/catalog_url.txt
-assets/placeholder.png
+# assets gerados são versionados (icon/placeholder/empty/header)
 .DS_Store

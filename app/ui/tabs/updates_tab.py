@@ -1,41 +1,69 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 from app.models.catalog import Catalog
 from app.config import get_catalog_url
 from app.ui.styles import COLORS, FONTS
 from app.utils.browser import open_url
+from app.ui.components.scrollable import ScrollableFrame
 
 def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Frame:
-    frame = ttk.Frame(notebook, style="TFrame", padding=12)
-    ttk.Label(frame, text="Atualizações / Sobre", style="TLabel", font=FONTS["title"]).pack(anchor="w", pady=(0, 8))
+    frame = ttk.Frame(notebook, style="TFrame", padding=0)
+    sc = ScrollableFrame(frame)
+    sc.pack(fill="both", expand=True, padx=8, pady=8)
+    inner = sc.inner
 
+    # header hero
+    hero = tk.Frame(inner, bg=COLORS["bg_card"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+    hero.pack(fill="x", padx=12, pady=12)
+    h = tk.Frame(hero, bg=COLORS["bg_card"])
+    h.pack(fill="x", padx=16, pady=14)
+    tk.Label(h, text="Resource Hub", bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=("Segoe UI", 13, "bold")).pack(anchor="w")
+    tk.Label(h, text="Atualizações  ·  Sobre", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small_bold"]).pack(anchor="w", pady=(2, 0))
+    tk.Label(h, text="O catálogo remoto é a única fonte da verdade. O app nunca baixa ou executa arquivos — apenas abre links no navegador.",
+             bg=COLORS["bg_card"], fg=COLORS["text_secondary"], font=FONTS["small"], wraplength=640, justify="left").pack(anchor="w", pady=(8, 0))
+
+    # versão
+    card = tk.Frame(inner, bg=COLORS["bg_card"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+    card.pack(fill="x", padx=12, pady=6)
+    c = tk.Frame(card, bg=COLORS["bg_card"])
+    c.pack(fill="x", padx=16, pady=12)
     if catalog:
-        ttk.Label(frame, text=f"Versão do catálogo: {catalog.catalog_version}", style="TLabel", font=FONTS["subtitle"]).pack(anchor="w")
+        tk.Label(c, text=f"Versão do catálogo:  {catalog.catalog_version}", bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=FONTS["subtitle"]).pack(anchor="w")
+        tk.Label(c, text=f"Schema v{catalog.schema_version}  ·  {len(catalog.minecraft_versions)} Minecraft  ·  {len(catalog.java)} Java  ·  {len(catalog.other)} outros",
+                 bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w", pady=(4, 10))
         if catalog.app.changelog:
-            ttk.Label(frame, text="Changelog:", style="TLabel", font=FONTS["body"]).pack(anchor="w", pady=(12, 4))
-            txt = tk.Text(frame, wrap="word", height=12, bg=COLORS["bg_card"], fg=COLORS["text_secondary"], relief="flat", padx=8, pady=8, font=FONTS["body"])
+            tk.Label(c, text="Changelog", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small_bold"]).pack(anchor="w")
+            txt = tk.Text(c, wrap="word", height=10, bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0,
+                          padx=10, pady=10, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"])
             txt.insert("1.0", catalog.app.changelog)
             txt.configure(state="disabled")
-            txt.pack(fill="both", expand=True, pady=(0, 12))
+            txt.pack(fill="both", expand=True, pady=(6, 0))
         else:
-            ttk.Label(frame, text="Sem notas de atualização.", style="TLabel", foreground=COLORS["text_muted"]).pack(anchor="w", pady=8)
+            tk.Label(c, text="Sem notas de atualização.", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w", pady=8)
     else:
-        ttk.Label(frame, text="Catálogo não carregado.", style="TLabel", foreground=COLORS["error"]).pack(anchor="w")
-        ttk.Label(frame, text="Verifique sua conexão e tente atualizar.", style="TLabel", foreground=COLORS["text_muted"]).pack(anchor="w", pady=4)
+        tk.Label(c, text="Catálogo não carregado.", bg=COLORS["bg_card"], fg=COLORS["error"], font=FONTS["subtitle"]).pack(anchor="w")
+        tk.Label(c, text="Verifique a conexão e tente atualizar.", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w", pady=4)
 
-    # catalog URL section
-    url_frame = ttk.Frame(frame, style="TFrame")
-    url_frame.pack(fill="x", pady=8)
+    # URL
+    url_frame = tk.Frame(inner, bg=COLORS["bg_card"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+    url_frame.pack(fill="x", padx=12, pady=6)
+    u = tk.Frame(url_frame, bg=COLORS["bg_card"])
+    u.pack(fill="x", padx=16, pady=12)
+    tk.Label(u, text="URL do catálogo", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small_bold"]).pack(anchor="w")
     url = get_catalog_url()
-    ttk.Label(url_frame, text="URL do catálogo:", style="TLabel", font=FONTS["small"]).pack(anchor="w")
-    ttk.Label(url_frame, text=url, style="TLabel", foreground=COLORS["accent"], font=FONTS["small"], wraplength=900).pack(anchor="w")
-    def _open_cat():
-        open_url(url)
-    ttk.Button(url_frame, text="Abrir URL no navegador", style="Secondary.TButton", command=_open_cat).pack(anchor="w", pady=(6, 0))
+    lbl = tk.Label(u, text=url, bg=COLORS["bg_card"], fg=COLORS["accent"], font=FONTS["mono"], wraplength=580, justify="left", anchor="w", cursor="hand2")
+    lbl.pack(anchor="w", pady=(4, 8), fill="x")
+    lbl.bind("<Button-1>", lambda e: open_url(url))
+    btn_row = ttk.Frame(u, style="Card.TFrame")
+    btn_row.pack(anchor="w")
+    ttk.Button(btn_row, text="Abrir URL no navegador", style="Secondary.TButton", command=lambda: open_url(url)).pack(side="left")
 
-    ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=12)
-    ttk.Label(frame, text="Resource Hub — utilitário leve para organizar recursos do launcher externo.\nNão baixa nem executa arquivos automaticamente. Apenas exibe informações e copia/abre links no navegador padrão.", style="TLabel", foreground=COLORS["text_muted"], font=FONTS["small"], justify="left").pack(anchor="w")
-    ttk.Label(frame, text="Launcher externo não é modificado, embutido ou distribuído por este app.", style="TLabel", foreground=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w", pady=(4, 0))
+    # footer
+    ttk.Separator(inner, orient="horizontal").pack(fill="x", padx=12, pady=12)
+    tk.Label(inner, text="Launcher externo não é modificado, embutido ou distribuído por este app.",
+             bg=COLORS["bg"], fg=COLORS["text_dim"], font=FONTS["small"]).pack(anchor="w", padx=16, pady=(0, 2))
+    tk.Label(inner, text="© Resource Hub — utilitário leve, sem rastreamento, sem execução automática.",
+             bg=COLORS["bg"], fg=COLORS["text_dim"], font=FONTS["small"]).pack(anchor="w", padx=16, pady=(0, 12))
 
     return frame
