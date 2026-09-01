@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "app": {
+    "catalog_version": "1.0.1-debug",
+    "changelog": "[DEBUG] Catálogo de testes local.\n- Use este arquivo para simular updates remotos.\n- Altere catalog_version para disparar notificação de atualização.\n- Hospede este JSON em nuvem (ex: GitHub Raw, S3, Drive direto) e aponte RESOURCE_HUB_CATALOG_URL para ele."
+  },
+  "minecraft": {
+    "versions": [
+      {
+        "id": "1.8.9",
+        "name": "Minecraft 1.8.9 [DEBUG]",
+        "description": "Entrada de debug — edite via tools/catalog_editor.py",
+        "banner": "",
+        "link": "https://example.com/minecraft/1.8.9",
+        "warning": ""
+      },
+      {
+        "id": "1.20.6-debug",
+        "name": "Minecraft 1.20.6 Debug",
+        "description": "Versão fictícia para testar adição dinâmica de recursos.",
+        "banner": "https://via.placeholder.com/640x160.png?text=DEBUG+BANNER",
+        "link": "https://example.com/minecraft/1.20.6-debug",
+        "warning": "Aviso de debug: este warning deve aparecer amarelo no card."
+      }
+    ]
+  },
+  "libraries": {
+    "name": "Bibliotecas Compartilhadas [DEBUG]",
+    "description": "Pacote global de teste. Altere 'warning' para simular aviso de reinstalação.",
+    "link": "https://example.com/libraries-debug",
+    "warning": "DEBUG: Bibliotecas foram atualizadas! Reinstale o pacote global."
+  },
+  "java": [
+    {
+      "version": "21",
+      "name": "Java 21 [DEBUG]",
+      "description": "Debug entry — link verificado para abrir/copiar.",
+      "link": "https://adoptium.net/temurin/releases/?version=21"
+    }
+  ],
+  "launcher": {
+    "name": "Vortex Launcher",
+    "description": "Apontamento externo (não embutido).",
+    "link": "https://example.com/launcher"
+  },
+  "other": [
+    {
+      "name": "Patch Debug 001",
+      "description": "Patch de exemplo para testar aba Outros/Patches.",
+      "category": "patch",
+      "link": "https://example.com/patches/debug001",
+      "banner": "",
+      "warning": ""
+    },
+    {
+      "name": "Arquivo Extra Debug",
+      "description": "Categoria genérica.",
+      "category": "extra",
+      "link": "https://example.com/other/extra-debug",
+      "banner": "",
+      "warning": ""
+    }
+  ]
+}

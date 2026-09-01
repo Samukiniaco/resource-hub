@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "app": {
+    "catalog_version": "1.0.0",
+    "changelog": "Versão inicial do Resource Hub.\n- Suporte a Minecraft, Bibliotecas, Java e Outros/Patches.\n- Helper JavaPath para vortex_launcher.conf.\n- Atualização remota com cache offline."
+  },
+  "minecraft": {
+    "versions": [
+      {
+        "id": "1.8.9",
+        "name": "Minecraft 1.8.9",
+        "description": "Versão clássica amplamente usada em PvP e mods.",
+        "banner": "",
+        "link": "https://example.com/minecraft/1.8.9",
+        "warning": ""
+      },
+      {
+        "id": "1.20.1",
+        "name": "Minecraft 1.20.1",
+        "description": "Versão estável recente com suporte a mods modernos.",
+        "banner": "",
+        "link": "https://example.com/minecraft/1.20.1",
+        "warning": ""
+      }
+    ]
+  },
+  "libraries": {
+    "name": "Bibliotecas Compartilhadas",
+    "description": "Pacote global de bibliotecas compartilhadas entre todas as versões. Instale uma única vez.",
+    "link": "https://example.com/libraries",
+    "warning": ""
+  },
+  "java": [
+    {
+      "version": "21",
+      "name": "Java 21 (LTS)",
+      "description": "Recomendado para Minecraft 1.20+. Baixe o JDK/JRE e configure via aba Java.",
+      "link": "https://adoptium.net/temurin/releases/?version=21"
+    },
+    {
+      "version": "8",
+      "name": "Java 8",
+      "description": "Necessário para versões antigas como 1.8.9.",
+      "link": "https://adoptium.net/temurin/releases/?version=8"
+    }
+  ],
+  "launcher": {
+    "name": "Vortex Launcher",
+    "description": "Launcher externo — este app não o modifica nem distribui.",
+    "link": "https://example.com/launcher"
+  },
+  "other": [
+    {
+      "name": "Patch de Exemplo",
+      "description": "Correção opcional para compatibilidade.",
+      "category": "patch",
+      "link": "https://example.com/patches/example",
+      "banner": "",
+      "warning": ""
+    }
+  ]
+}

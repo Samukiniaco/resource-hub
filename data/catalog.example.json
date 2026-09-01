@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "app": {
+    "catalog_version": "1.1.0",
+    "changelog": "- Novas versões adicionadas\n- Banner de exemplo com link externo"
+  },
+  "minecraft": {
+    "versions": [
+      {
+        "id": "1.21.0",
+        "name": "Minecraft 1.21.0",
+        "description": "Exemplo com banner e warning.",
+        "banner": "https://via.placeholder.com/640x160.png?text=Minecraft+1.21",
+        "link": "https://example.com/minecraft/1.21.0",
+        "warning": "Requer reinstalação das bibliotecas após atualização."
+      }
+    ]
+  },
+  "libraries": {
+    "name": "Libs v2",
+    "description": "Pacote atualizado.",
+    "link": "https://example.com/libs-v2",
+    "warning": "O pacote de bibliotecas foi atualizado. Reinstale o pacote global."
+  },
+  "java": [],
+  "launcher": {},
+  "other": []
+}

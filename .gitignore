@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+*.tmp
+*.exe
+data/catalog.tmp.json
+data/image_cache/
+data/resource_hub.log
+data/catalog_url.txt
+assets/placeholder.png
+.DS_Store
