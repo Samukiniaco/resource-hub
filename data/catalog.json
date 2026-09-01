@@ -1,25 +1,105 @@
 {
   "schema_version": 1,
   "app": {
-    "catalog_version": "1.0.0",
-    "changelog": "Versão inicial do Resource Hub.\n- Suporte a Minecraft, Bibliotecas, Java e Outros/Patches.\n- Helper JavaPath para vortex_launcher.conf.\n- Atualização remota com cache offline."
+    "catalog_version": "1.0.1",
+    "changelog": "Versão inicial do Resource Hub.\n- Suporte a Minecraft, Bibliotecas, Java e Outros/Patches.\n- Helper JavaPath para vortex_launcher.conf.\n- Atualização remota com cache offline.\n- Outros: Modpack \"Luse x Sosa\" adicionado por pedido"
   },
   "minecraft": {
     "versions": [
       {
-        "id": "1.8.9",
-        "name": "Minecraft 1.8.9",
-        "description": "Versão clássica amplamente usada em PvP e mods.",
-        "banner": "",
-        "link": "https://example.com/minecraft/1.8.9",
+        "id": "1.20.1",
+        "name": "Minecraft 1.20.1: Vanilla",
+        "description": "Versão estável padrão, usa Java 17.",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1cEyHri1VnzMEJJkNFDwWHVaXEQsunv8W?usp=drive_link",
         "warning": ""
       },
       {
         "id": "1.20.1",
-        "name": "Minecraft 1.20.1",
-        "description": "Versão estável recente com suporte a mods modernos.",
-        "banner": "",
-        "link": "https://example.com/minecraft/1.20.1",
+        "name": "Minecraft 1.20.1: Forge",
+        "description": "Versão 1.20.1 com Forge 47.4.10, usa Java 17.",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/14sxa2Ut3PVDyoZn9rYjfabkTlTB7EkAq?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.1",
+        "name": "Minecraft 1.21.1: Vanilla",
+        "description": "Versão estável padrão. Já instalada no \"Ultimate Prxydef\" por padrão, reinstale por aqui! Usa Java 21+",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1F1aMfvMIOCZBvfHp_Mhswi8UCMc3nhMa?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.1",
+        "name": "Minecraft 1.21.1: NeoForge",
+        "description": "Versão 1.21.1 com NeoForge 21.1.234. Já instalada no \"Ultimate Prxydef\" por padrão, reinstale por aqui!",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1nW3dfnxQMErtYGYV8YT3Dk2RGPd88ajj?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.1",
+        "name": "Minecraft 1.21.1: Optifine",
+        "description": "Versão 1.21.1 Vanilla com Optifine!",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1gjy1ol6s4JwyeTBe8vLja0eBVbjEG9MV?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.1",
+        "name": "Minecraft 1.21.1: Fabric",
+        "description": "Versão 1.21.1 com Fabric 0.19.3",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1F1aMfvMIOCZBvfHp_Mhswi8UCMc3nhMa?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "26.3-pre-1",
+        "name": "Minecraft 26.3-pre-1: Snapshot",
+        "description": "Última snapshot do Minecraft desde lançamento da V1.0.1 da Resource Hub!",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1y9AlZ8WBcxsCVbFe68_JgFYfwnmoBuej?usp=drive_link",
+        "warning": "Experimental, nunca foi testado snapshots antes desta forma!"
+      },
+      {
+        "id": "26.2",
+        "name": "Minecraft 26.2: Vanilla",
+        "description": "Última versão estável do Minecraft desde lançamento da V1.0.1 da Resource Hub! Usa Java 25+",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/12kiu6-BAdiTkrnIN0eITgMkiBkA2Y7AM?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.5",
+        "name": "Minecraft 1.21.5: Vanilla",
+        "description": "Particularmente adicionado apenas para colocar Fabric, usa Java 21+",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1JlRDr5ihLl2x205-_x97DT22BrqD6PRc?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.21.5",
+        "name": "Minecraft 1.21.5: Fabric",
+        "description": "Versão 1.21.5 com Fabric 0.16.14",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1BDOUzwW7bjTeSAN2HEJeU5CGqfRxmEhf?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.16.5",
+        "name": "Minecraft 1.16.5: Vanilla",
+        "description": "Versão estável padrão. Usa Java 8+",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1dVRbAQRnHHGrgj_n1r8t2gzgAeW0jGp8?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.16.5",
+        "name": "Minecraft 1.16.5: Forge",
+        "description": "Versão 1.16.5 com Forge 36.2.34",
+        "banner": "Google Drive",
+        "link": "https://drive.google.com/drive/folders/1TtKVMDO1LRzCzZD_zdxPvHRxt7RTKFAK?usp=drive_link",
         "warning": ""
       }
     ]
@@ -27,8 +107,9 @@
   "libraries": {
     "name": "Bibliotecas Compartilhadas",
     "description": "Pacote global de bibliotecas compartilhadas entre todas as versões. Instale uma única vez.",
-    "link": "https://example.com/libraries",
-    "warning": ""
+    "link": "https://drive.google.com/drive/folders/1wMsVs9SDrX33Z-a-RBQOx7pb9Wp2VL1J?usp=drive_link",
+    "warning": "V1.0.1!! Atualize todas as bibliotecas de uma vez para que não haja problemas em quaisquer versões que estejam aqui (outras versões adicionadas externamente podem não funcionar)",
+    "banner": ""
   },
   "java": [
     {
@@ -47,15 +128,15 @@
   "launcher": {
     "name": "Vortex Launcher",
     "description": "Launcher externo — este app não o modifica nem distribui.",
-    "link": "https://example.com/launcher"
+    "link": "https://sites.google.com/view/ultimateprxydef"
   },
   "other": [
     {
-      "name": "Patch de Exemplo",
-      "description": "Correção opcional para compatibilidade.",
-      "category": "patch",
-      "link": "https://example.com/patches/example",
-      "banner": "",
+      "name": "Modpack: \"Luse x Sosa\"",
+      "description": "Um modpack adicionado por um pedido especial, para instalar arraste os arquivos para dentro da pasta \".minecraft\"",
+      "category": "modpack",
+      "link": "https://drive.google.com/file/d/149pTwBamikWua7SUNuAGxw4edjZK_9eS/view?usp=drive_link",
+      "banner": "Google Drive",
       "warning": ""
     }
   ]
