@@ -93,14 +93,59 @@ def build_java_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Frame
     count = len(catalog.java) if catalog and catalog.java else 0
     ttk.Label(header2, text=f"{count} itens", style="Muted.TLabel", font=FONTS["small"]).pack(side="right")
 
+    # tema livre: busca java
+    search_frame = tk.Frame(inner, bg=COLORS["bg"], highlightthickness=0)
+    search_frame.pack(fill="x", padx=8, pady=(4, 6))
+    tk.Label(search_frame, text="🔍", bg=COLORS["bg"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(side="left", padx=(0, 6))
+    search_var = tk.StringVar()
+    search_entry = ttk.Entry(search_frame, textvariable=search_var, font=FONTS["small"])
+    search_entry.pack(side="left", fill="x", expand=True)
+    search_entry.insert(0, "Buscar Java…")
+    def _on_focus_in(e):
+        if search_entry.get() == "Buscar Java…":
+            search_entry.delete(0, "end")
+            search_entry.configure(foreground=COLORS["text_primary"])
+    def _on_focus_out(e):
+        if not search_entry.get().strip():
+            search_entry.delete(0, "end")
+            search_entry.insert(0, "Buscar Java…")
+            search_entry.configure(foreground=COLORS["text_muted"])
+    search_entry.bind("<FocusIn>", _on_focus_in)
+    search_entry.bind("<FocusOut>", _on_focus_out)
+    search_entry.configure(foreground=COLORS["text_muted"])
+
     if not catalog or not catalog.java:
         empty = ttk.Frame(inner, style="Card.TFrame", padding=20)
         empty.pack(fill="x", padx=12, pady=12)
         ttk.Label(empty, text="Nenhum pacote Java configurado.", style="Card.TLabel", font=FONTS["subtitle"]).pack()
         return frame
 
+    cards = []
     for j in catalog.java:
         card = ResourceCard(inner, title=j.name, description=j.description or f"Java {j.version}", link=j.link, banner_url="", warning="")
         card.pack(fill="x", padx=12, pady=6)
+        searchable = f"{j.name} {j.version} {j.description}".lower()
+        cards.append((card, searchable))
+
+    no_result = ttk.Label(inner, text="Nenhum resultado.", style="Muted.TLabel", font=FONTS["small"])
+    def _filter(*args):
+        q = search_var.get().strip().lower()
+        if q == "buscar java…":
+            q = ""
+        visible = 0
+        for card, text in cards:
+            show = not q or q in text
+            if show:
+                card.pack(fill="x", padx=12, pady=6)
+                visible += 1
+            else:
+                card.pack_forget()
+        if visible == 0 and q:
+            no_result.pack(pady=12)
+        else:
+            no_result.pack_forget()
+        sc._update_scrollregion()
+    search_var.trace_add("write", lambda *_: _filter())
+
     ttk.Frame(inner, style="TFrame", height=8).pack(fill="x")
     return frame

@@ -375,8 +375,13 @@ class CatalogEditor(tk.Tk):
                 ttk.Entry(parent, textvariable=var).pack(fill="x")
                 fields[key] = var
         setattr(self, f"{kind}_fields", fields)
-        ttk.Button(parent, text="Aplicar alterações no item selecionado", command=lambda k=kind: self.list_apply(k)).pack(pady=12, fill="x")
-        ttk.Label(parent, text="Dica: campos vazios são permitidos (exceto id/nome/version). Link deve ser http/https se preenchido.", font=("Segoe UI", 8), foreground="#666").pack(anchor="w")
+        # Botões de ação do formulário
+        row = ttk.Frame(parent)
+        row.pack(fill="x", pady=12)
+        ttk.Button(row, text="Aplicar no selecionado", command=lambda k=kind: self.list_apply(k)).pack(side="left", fill="x", expand=True, padx=(0, 4))
+        ttk.Button(row, text="Limpar formulário", command=lambda k=kind: self._clear_form(k)).pack(side="left")
+        ttk.Label(parent, text="Fluxo: preencha o formulário acima e clique 'Novo' para criar (usa o que você digitou) • ou selecione na lista, edite e clique 'Aplicar'. Ctrl+Z desfaz.", font=("Segoe UI", 7), foreground="#666", wraplength=420, justify="left").pack(anchor="w", pady=(4, 0))
+        ttk.Label(parent, text="Campos vazios são permitidos (exceto id/nome/version). Link deve ser http/https se preenchido.", font=("Segoe UI", 7), foreground="#888", wraplength=420).pack(anchor="w")
 
     # ----- List operations -----
     def _get_list(self, kind: str) -> list:
@@ -392,17 +397,68 @@ class CatalogEditor(tk.Tk):
         else:
             self.catalog[kind] = lst
 
+    def _clear_form(self, kind: str):
+        fields = getattr(self, f"{kind}_fields", {})
+        for widget in fields.values():
+            if isinstance(widget, tk.Text):
+                widget.delete("1.0", "end")
+                widget.edit_reset()  # limpa undo stack do clear
+            else:
+                widget.set("")
+        # deseleciona lista para indicar criação de novo
+        try:
+            lb = getattr(self, f"{kind}_listbox")
+            lb.selection_clear(0, "end")
+            setattr(self, f"{kind}_current", None)
+        except Exception:
+            pass
+
     def list_new(self, kind: str):
-        lst = self._get_list(kind)
+        # FIX: se o usuário preencheu o formulário e clicou Novo, usa o formulário (não apaga)
+        fields = getattr(self, f"{kind}_fields", {})
+        form_values = {}
+        has_data = False
+        for key, widget in fields.items():
+            val = widget.get("1.0", "end").strip() if isinstance(widget, tk.Text) else widget.get().strip()
+            form_values[key] = val
+            if val:
+                has_data = True
+
         template = {
             "minecraft": {"id": "1.21.0", "name": "Minecraft 1.21.0", "description": "", "banner": "", "link": "https://example.com", "warning": ""},
             "java": {"version": "21", "name": "Java 21", "description": "", "link": "https://example.com"},
             "other": {"name": "Novo Recurso", "description": "", "category": "patch", "link": "https://example.com", "banner": "", "warning": ""},
         }[kind]
-        lst.append(deepcopy(template))
+
+        if has_data:
+            # usa o que foi digitado; completa chaves faltantes com "" ou template para obrigatórios vazios
+            new_item = {}
+            for key in template.keys():
+                v = form_values.get(key, "")
+                # se campo obrigatório vazio e usuário deixou em branco, usa template como fallback para não criar inválido vazio
+                if not v and key in ("id", "name", "version") and template.get(key):
+                    # mantém o que digitou se houver, senão usa template como sugestão
+                    v = form_values.get(key, "") or template[key]
+                new_item[key] = v
+            # se ainda assim tudo vazio (usuário só preencheu 1 campo), mantém template para os vazios
+            # mas já feito
+        else:
+            new_item = deepcopy(template)
+
+        lst = self._get_list(kind)
+        lst.append(new_item)
         self._set_list(kind, lst)
-        self.refresh_lists()
+        # seleciona o novo
+        self.refresh_lists(select_idx=len(lst) - 1)
+        # carrega o novo no formulário (garante que Ctrl+Z pode desfazer o clear anterior, mas agora mostra o novo)
+        # não limpa o formulário — mantém valores para conferência; usuário pode editar e Aplicar se quiser
+        lb = getattr(self, f"{kind}_listbox")
+        lb.selection_clear(0, "end")
+        lb.selection_set(len(lst) - 1)
+        lb.see(len(lst) - 1)
+        self.list_select(kind)
         self._mark_dirty()
+        self.status.set(f"{kind}: novo item criado a partir do formulário ({new_item.get('name') or new_item.get('id') or new_item.get('version','')}). Salve para persistir.")
 
     def list_duplicate(self, kind: str):
         lb = getattr(self, f"{kind}_listbox")
