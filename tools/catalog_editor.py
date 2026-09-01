@@ -66,6 +66,8 @@ class CatalogEditor(tk.Tk):
         self.minsize(860, 600)
         self.catalog: dict = {}
         self.current_path: Path | None = None
+        self._saved_snapshot: str = ""
+        self._dirty: bool = False
 
         # style light for editor (different from dark app)
         style = ttk.Style(self)
@@ -126,6 +128,27 @@ class CatalogEditor(tk.Tk):
         self.status = tk.StringVar(value="Pronto.")
         ttk.Label(self, textvariable=self.status, anchor="w", padding=(8, 4)).pack(fill="x")
 
+        # tema livre: dicas rotativas + atalhos
+        self._tips = [
+            "Dica: Ctrl+S salva rapidamente • Ctrl+Q sai com confirmação",
+            "Dica: Altere catalog_version para notificar todos os usuários",
+            "Dica: Use 'Bump patch' para semântica de versão",
+            "Dica: Banner vazio = card mais leve • Warning = destaque amarelo",
+            "Dica: hospede o JSON no GitHub Raw e aponte RESOURCE_HUB_CATALOG_URL",
+        ]
+        import random as _rnd
+        self._tip_var = tk.StringVar(value=_rnd.choice(self._tips))
+        ttk.Label(self, textvariable=self._tip_var, anchor="w", padding=(8, 0), foreground="#666", font=("Segoe UI", 8, "italic")).pack(fill="x")
+        self.after(8000, self._rotate_tip)
+
+        # confirmação ao fechar + atalhos + tema livre
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.bind_all("<Control-s>", lambda e: self.save())
+        self.bind_all("<Control-S>", lambda e: self.save())
+        self.bind_all("<Control-q>", lambda e: self._on_close())
+        # marcar dirty ao digitar nas áreas principais
+        self._setup_dirty_tracking()
+
         # initial load
         if initial_path and initial_path.exists():
             self.load_path(initial_path)
@@ -147,6 +170,7 @@ class CatalogEditor(tk.Tk):
                     "other": []
                 }
                 self.refresh_all()
+                self._snapshot_saved()
 
     # ----- App tab -----
     def _build_app_tab(self, parent):
@@ -180,6 +204,85 @@ class CatalogEditor(tk.Tk):
 
     def bump_version(self):
         self.version_var.set(bump_patch(self.version_var.get().strip() or "1.0.0"))
+        self._mark_dirty()
+
+    # ----- Tema livre: helpers dirty / tips / preview -----
+    def _snapshot_saved(self):
+        try:
+            self._saved_snapshot = json.dumps(self.catalog, ensure_ascii=False, sort_keys=True)
+            self._dirty = False
+            self._update_title()
+        except Exception:
+            pass
+
+    def _is_dirty(self) -> bool:
+        try:
+            # compara snapshot com estado atual (inclui edits não aplicados via sync_from_ui)
+            cur = deepcopy(self.catalog)
+            # simula sync_from_ui sem alterar self.catalog original para checagem
+            tmp = json.loads(json.dumps(cur, ensure_ascii=False))
+            # aplica campos de UI temporariamente
+            tmp["schema_version"] = 1
+            if "app" not in tmp:
+                tmp["app"] = {}
+            tmp["app"]["catalog_version"] = self.version_var.get().strip() if hasattr(self, "version_var") else tmp.get("app", {}).get("catalog_version", "")
+            if hasattr(self, "changelog_text"):
+                tmp["app"]["changelog"] = self.changelog_text.get("1.0", "end").strip()
+            cur_dump = json.dumps(tmp, ensure_ascii=False, sort_keys=True)
+            return cur_dump != self._saved_snapshot or self._dirty
+        except Exception:
+            return self._dirty
+
+    def _mark_dirty(self, *args):
+        if not self._dirty:
+            self._dirty = True
+            self._update_title()
+
+    def _update_title(self):
+        base = "Resource Hub — Catalog Editor"
+        path_part = f" — {self.current_path.name}" if self.current_path else ""
+        dirty_mark = " •" if self._is_dirty() else ""
+        self.title(base + path_part + dirty_mark)
+
+    def _rotate_tip(self):
+        import random as _rnd
+        self._tip_var.set(_rnd.choice(self._tips))
+        self.after(10000, self._rotate_tip)
+
+    def _setup_dirty_tracking(self):
+        # rastreia mudanças nas variáveis e textos principais
+        try:
+            self.version_var.trace_add("write", lambda *_: self._mark_dirty())
+            self.launcher_name_var.trace_add("write", lambda *_: self._mark_dirty())
+            self.launcher_link_var.trace_add("write", lambda *_: self._mark_dirty())
+        except Exception:
+            pass
+        for txt_attr in ("changelog_text", "libs_desc_text", "libs_warning_text", "raw_text"):
+            try:
+                widget = getattr(self, txt_attr, None)
+                if widget is not None:
+                    widget.bind("<KeyRelease>", lambda e: self._mark_dirty(), add="+")
+                    widget.bind("<FocusOut>", lambda e: self._update_title(), add="+")
+            except Exception:
+                pass
+
+    def _on_close(self):
+        if self._is_dirty():
+            resp = messagebox.askyesnocancel(
+                "Alterações não salvas",
+                "Há alterações não salvas no catálogo.\n\nDeseja salvar antes de sair?\n• Sim = Salvar e sair\n• Não = Sair sem salvar\n• Cancelar = Ficar no editor",
+                parent=self,
+            )
+            if resp is None:  # Cancelar
+                return
+            if resp:  # Sim
+                self.save()
+                # se ainda dirty (falha ao salvar/validação cancelada), não fecha
+                if self._is_dirty():
+                    # usuário cancelou save ou falhou
+                    return
+        # tema livre: despedida sutil
+        self.destroy()
 
     # ----- Libraries tab -----
     def _build_libs_tab(self, parent):
@@ -280,6 +383,7 @@ class CatalogEditor(tk.Tk):
         lst.append(deepcopy(template))
         self._set_list(kind, lst)
         self.refresh_lists()
+        self._mark_dirty()
 
     def list_duplicate(self, kind: str):
         lb = getattr(self, f"{kind}_listbox")
@@ -289,6 +393,7 @@ class CatalogEditor(tk.Tk):
         lst = self._get_list(kind)
         lst.append(deepcopy(lst[sel[0]]))
         self.refresh_lists()
+        self._mark_dirty()
 
     def list_remove(self, kind: str):
         lb = getattr(self, f"{kind}_listbox")
@@ -300,6 +405,7 @@ class CatalogEditor(tk.Tk):
         del lst[idx]
         self._set_list(kind, lst)
         self.refresh_lists()
+        self._mark_dirty()
 
     def list_select(self, kind: str):
         lb = getattr(self, f"{kind}_listbox")
@@ -339,6 +445,7 @@ class CatalogEditor(tk.Tk):
         self._set_list(kind, lst)
         self.refresh_lists(select_idx=idx)
         self.status.set(f"{kind} [{idx}] atualizado (não esqueça de Salvar).")
+        self._mark_dirty()
 
     # ----- Load/Save -----
     def load_path(self, path: Path):
@@ -350,6 +457,7 @@ class CatalogEditor(tk.Tk):
             self.current_path = path
             self.path_var.set(str(path))
             self.refresh_all()
+            self._snapshot_saved()
             self.status.set(f"Carregado: {path} (v{data.get('app',{}).get('catalog_version','?')})")
         except Exception as e:
             messagebox.showerror("Erro ao carregar", f"{path}\n\n{e}", parent=self)
@@ -438,7 +546,7 @@ class CatalogEditor(tk.Tk):
             messagebox.showerror("Inválido", str(e), parent=self)
             self.status.set(f"Inválido: {e}")
 
-    def save(self):
+    def save(self) -> bool:
         if not self.current_path:
             return self.save_as()
         self.sync_from_ui()
@@ -446,23 +554,49 @@ class CatalogEditor(tk.Tk):
             validate_catalog(self.catalog)
         except Exception as e:
             if not messagebox.askyesno("Salvar inválido?", f"Catálogo inválido:\n{e}\n\nSalvar mesmo assim?", parent=self):
-                return
+                return False
         try:
             save_json(self.current_path, self.catalog)
+            self._snapshot_saved()
             self.status.set(f"Salvo: {self.current_path}")
+            # tema livre: celebração sutil ao salvar nova versão
+            try:
+                self._celebrate_save()
+            except Exception:
+                pass
             messagebox.showinfo("Salvo", f"Arquivo salvo:\n{self.current_path}\n\nFaça upload deste JSON para sua nuvem e atualize a URL no app.", parent=self)
+            return True
         except Exception as e:
             messagebox.showerror("Erro ao salvar", str(e), parent=self)
+            return False
 
-    def save_as(self):
+    def _celebrate_save(self):
+        # confete minimalista no status por 1.5s
+        orig = self.status.get()
+        self.status.set("✓ Salvo! " + orig)
+        self.after(1500, lambda: self.status.set(orig.replace("✓ Salvo! ", "")) if self.status.get().startswith("✓") else None)
+
+    def save_as(self) -> bool:
         path = filedialog.asksaveasfilename(parent=self, defaultextension=".json", filetypes=[("JSON", "*.json")], initialdir=str(PROJECT_ROOT))
         if not path:
-            return
+            return False
         self.current_path = Path(path)
         self.path_var.set(str(self.current_path))
-        self.save()
+        return self.save()
 
     def open_dialog(self):
+        if self._is_dirty():
+            resp = messagebox.askyesnocancel(
+                "Alterações não salvas",
+                "Há alterações não salvas. Deseja salvar antes de abrir outro arquivo?",
+                parent=self,
+            )
+            if resp is None:
+                return
+            if resp and not self.save():
+                return
+            if resp and self._is_dirty():
+                return
         path = filedialog.askopenfilename(parent=self, filetypes=[("JSON", "*.json")], initialdir=str(PROJECT_ROOT))
         if path:
             self.load_path(Path(path))
@@ -473,7 +607,8 @@ class CatalogEditor(tk.Tk):
             validate_catalog(data)
             self.catalog = data
             self.refresh_all()
-            self.status.set("JSON bruto carregado e válido.")
+            self._mark_dirty()
+            self.status.set("JSON bruto carregado e válido (não salvo).")
         except Exception as e:
             messagebox.showerror("Erro", f"JSON inválido:\n{e}", parent=self)
 

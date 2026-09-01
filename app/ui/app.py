@@ -43,9 +43,26 @@ class MainWindow:
             if icon_path.exists():
                 img = Image.open(icon_path).resize((28, 28), Image.LANCZOS)
                 self._icon_img = ImageTk.PhotoImage(img)
-                tk.Label(left, image=self._icon_img, bg=COLORS["bg_top"], bd=0).pack(side="left", padx=(0, 8))
+                self._logo_label = tk.Label(left, image=self._icon_img, bg=COLORS["bg_top"], bd=0, cursor="hand2")
+                self._logo_label.pack(side="left", padx=(0, 8))
+                # tema livre: easter egg ao clicar 5x no logo
+                self._logo_clicks = 0
+                def _egg(e=None):
+                    self._logo_clicks += 1
+                    if self._logo_clicks >= 5:
+                        self._logo_clicks = 0
+                        try:
+                            # confete sutil + mensagem
+                            self.status_var.set("☕ Tema livre: você encontrou o easter egg! — 'Stay hydrated & keep crafting' ✨")
+                            self.dot_label.configure(fg=COLORS["accent"])
+                            self.root.after(4000, lambda: self.status_var.set(f"Catálogo local v{self.catalog.catalog_version} carregado" if self.catalog else "Pronto."))
+                        except Exception:
+                            pass
+                self._logo_label.bind("<Button-1>", _egg)
+            else:
+                self._logo_label = None
         except Exception:
-            pass
+            self._logo_label = None
         tk.Label(left, text="Resource Hub", bg=COLORS["bg_top"], fg=COLORS["text_primary"], font=FONTS["brand"]).pack(side="left")
         tk.Label(left, text="  ·  recursos do launcher", bg=COLORS["bg_top"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(side="left", padx=(8, 0))
 
