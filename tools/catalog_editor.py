@@ -86,7 +86,8 @@ class CatalogEditor(tk.Tk):
         ttk.Button(top, text="Abrir…", command=self.open_dialog).pack(side="left", padx=2)
         ttk.Button(top, text="Salvar", command=self.save).pack(side="left", padx=2)
         ttk.Button(top, text="Salvar como…", command=self.save_as).pack(side="left", padx=2)
-        ttk.Button(top, text="Validar", command=self.validate).pack(side="left", padx=6)
+        ttk.Button(top, text="Validar", command=self.validate).pack(side="left", padx=2)
+        ttk.Button(top, text="☁️ Publicar", command=self.publish_to_github, style="Accent.TButton").pack(side="left", padx=(8, 0))
 
         # main notebook
         nb = ttk.Notebook(self)
@@ -120,7 +121,7 @@ class CatalogEditor(tk.Tk):
         # --- Tab 6: Raw JSON ---
         self.tab_raw = ttk.Frame(nb, padding=8)
         nb.add(self.tab_raw, text=" JSON Bruto ")
-        self.raw_text = tk.Text(self.tab_raw, wrap="none", font=("Consolas", 9))
+        self.raw_text = self._create_text(self.tab_raw, height=20, wrap="none", font=("Consolas", 9))
         self.raw_text.pack(fill="both", expand=True)
         ttk.Button(self.tab_raw, text="Carregar do editor bruto → memória", command=self.load_from_raw).pack(pady=6)
 
@@ -189,7 +190,7 @@ class CatalogEditor(tk.Tk):
         ttk.Label(parent, text="Dica: hospede o JSON em nuvem (GitHub Raw/S3) e o app detecta versão nova vs cache local.").pack(anchor="w", pady=(0, 8))
 
         ttk.Label(parent, text="changelog (exibido ao usuário quando há nova versão):").pack(anchor="w")
-        self.changelog_text = tk.Text(parent, height=10, wrap="word", font=("Segoe UI", 9))
+        self.changelog_text = self._create_text(parent, height=10, wrap="word", font=("Segoe UI", 9))
         self.changelog_text.pack(fill="both", expand=True, pady=4)
 
         ttk.Label(parent, text="launcher (opcional, ex: link do Vortex Launcher):").pack(anchor="w", pady=(8, 0))
@@ -249,6 +250,24 @@ class CatalogEditor(tk.Tk):
         self._tip_var.set(_rnd.choice(self._tips))
         self.after(10000, self._rotate_tip)
 
+    def _create_text(self, parent, height=3, wrap="word", font=("Segoe UI", 9), **kwargs):
+        """Cria tk.Text com undo (Ctrl+Z/Y) habilitado."""
+        txt = tk.Text(parent, height=height, wrap=wrap, font=font, undo=True, maxundo=200, autoseparators=True, **kwargs)
+        # Bind undo/redo — evita conflito com bind_all do editor
+        txt.bind("<Control-z>", lambda e: (e.widget.event_generate("<<Undo>>"), "break")[1])
+        txt.bind("<Control-Z>", lambda e: (e.widget.event_generate("<<Undo>>"), "break")[1])
+        txt.bind("<Control-y>", lambda e: (e.widget.event_generate("<<Redo>>"), "break")[1])
+        txt.bind("<Control-Y>", lambda e: (e.widget.event_generate("<<Redo>>"), "break")[1])
+        txt.bind("<Control-Shift-Z>", lambda e: (e.widget.event_generate("<<Redo>>"), "break")[1])
+        # Ctrl+A já funciona no Tk, mas garante em todos os textos
+        txt.bind("<Control-a>", lambda e: (e.widget.tag_add("sel", "1.0", "end"), "break")[1])
+        txt.bind("<Control-A>", lambda e: (e.widget.tag_add("sel", "1.0", "end"), "break")[1])
+        # Marcar dirty ao editar (inclui undo/redo)
+        txt.bind("<KeyRelease>", lambda e: self._mark_dirty(), add="+")
+        # Separador de undo a cada foco/enter — melhora granularidade
+        txt.bind("<FocusIn>", lambda e: e.widget.edit_separator(), add="+")
+        return txt
+
     def _setup_dirty_tracking(self):
         # rastreia mudanças nas variáveis e textos principais
         try:
@@ -293,7 +312,7 @@ class CatalogEditor(tk.Tk):
             var = tk.StringVar()
             setattr(self, attr + "_var", var)
             if "Descrição" in label or "Warning" in label:
-                txt = tk.Text(parent, height=3, wrap="word", font=("Segoe UI", 9))
+                txt = self._create_text(parent, height=3, wrap="word", font=("Segoe UI", 9))
                 setattr(self, attr + "_text", txt)
                 txt.pack(fill="x", pady=2)
             else:
@@ -348,7 +367,7 @@ class CatalogEditor(tk.Tk):
         for key, label, is_text in defs[kind]:
             ttk.Label(parent, text=label + ":").pack(anchor="w", pady=(6, 0))
             if is_text:
-                txt = tk.Text(parent, height=3, wrap="word", font=("Segoe UI", 9))
+                txt = self._create_text(parent, height=3, wrap="word", font=("Segoe UI", 9))
                 txt.pack(fill="x")
                 fields[key] = txt
             else:
@@ -575,6 +594,193 @@ class CatalogEditor(tk.Tk):
         orig = self.status.get()
         self.status.set("✓ Salvo! " + orig)
         self.after(1500, lambda: self.status.set(orig.replace("✓ Salvo! ", "")) if self.status.get().startswith("✓") else None)
+
+    # ----- Publicar na nuvem (GitHub) com autenticação -----
+    def _run_git(self, *args, cwd=PROJECT_ROOT):
+        import subprocess
+        result = subprocess.run(["git"] + list(args), cwd=str(cwd), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return result
+
+    def publish_to_github(self):
+        """Salva, commita e dá push no catálogo para o GitHub (com autenticação)."""
+        import subprocess, os, re
+        # 1. Salvar primeiro (valida)
+        if not self.current_path:
+            messagebox.showwarning("Sem arquivo", "Salve o catálogo em um arquivo dentro do repositório antes de publicar (ex: data/catalog.json).", parent=self)
+            if not self.save_as():
+                return
+        else:
+            # força save silencioso antes de publicar
+            self.sync_from_ui()
+            try:
+                validate_catalog(self.catalog)
+            except Exception as e:
+                messagebox.showerror("Catálogo inválido", str(e), parent=self)
+                return
+            try:
+                save_json(self.current_path, self.catalog)
+                self._snapshot_saved()
+                self.status.set(f"Salvo: {self.current_path}")
+            except Exception as e:
+                messagebox.showerror("Erro ao salvar", str(e), parent=self)
+                return
+
+        # 2. Verifica se está dentro de repo git
+        git_check = self._run_git("rev-parse", "--is-inside-work-tree")
+        if git_check.returncode != 0:
+            messagebox.showerror("Não é repositório git", "Este catálogo não está dentro de um repositório git.\n\nAbra um arquivo dentro de 'resource-hub/' que já tem .git.", parent=self)
+            return
+
+        # 3. Verifica se arquivo está dentro do repo
+        try:
+            rel = self.current_path.resolve().relative_to(PROJECT_ROOT.resolve())
+        except ValueError:
+            # arquivo fora do repo — oferece copiar para data/catalog.json
+            if messagebox.askyesno("Fora do repositório", f"O arquivo está fora do projeto:\n{self.current_path}\n\nCopiar para data/catalog.json e publicar de lá?", parent=self):
+                target = PROJECT_ROOT / "data" / "catalog.json"
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    save_json(target, self.catalog)
+                    self.current_path = target
+                    self.path_var.set(str(target))
+                    self._snapshot_saved()
+                    rel = target.relative_to(PROJECT_ROOT)
+                except Exception as e:
+                    messagebox.showerror("Erro", str(e), parent=self)
+                    return
+            else:
+                return
+
+        # 4. Dialog de commit com autenticação
+        dlg = tk.Toplevel(self)
+        dlg.title("Publicar no GitHub ☁️")
+        dlg.transient(self); dlg.grab_set()
+        dlg.geometry("520x360")
+        dlg.configure(bg="#f5f5f5")
+        ttk.Label(dlg, text="Publicar catálogo no GitHub", font=("Segoe UI", 11, "bold")).pack(padx=12, pady=(12, 4), anchor="w")
+        ttk.Label(dlg, text=f"Arquivo: {rel}", font=("Segoe UI", 8)).pack(padx=12, anchor="w")
+        ttk.Label(dlg, text="Mensagem do commit:").pack(padx=12, pady=(8, 0), anchor="w")
+        msg_var = tk.StringVar(value=f"chore(catalog): update to v{self.catalog.get('app', {}).get('catalog_version', '?.?.?')}")
+        ttk.Entry(dlg, textvariable=msg_var).pack(padx=12, fill="x", pady=4)
+        ttk.Label(dlg, text="Remote:").pack(padx=12, anchor="w")
+        remote_res = self._run_git("remote", "get-url", "origin")
+        remote_url = remote_res.stdout.strip() if remote_res.returncode == 0 else "(sem origin)"
+        ttk.Label(dlg, text=remote_url, font=("Consolas", 8), foreground="#555").pack(padx=12, anchor="w")
+        ttk.Separator(dlg, orient="horizontal").pack(fill="x", padx=12, pady=8)
+
+        # Autenticação
+        auth_frame = ttk.LabelFrame(dlg, text="Autenticação (se o push pedir)", padding=8)
+        auth_frame.pack(fill="x", padx=12, pady=4)
+        ttk.Label(auth_frame, text="O push usa as credenciais já salvas no Windows (Credential Manager).\nSe nunca fez push antes, informe um PAT abaixo. Deixe em branco para tentar sem token.", font=("Segoe UI", 8), foreground="#666").pack(anchor="w")
+        ttk.Label(auth_frame, text="GitHub PAT (ghp_...):").pack(anchor="w", pady=(6, 0))
+        token_var = tk.StringVar(value=os.environ.get("GITHUB_TOKEN", ""))
+        token_entry = ttk.Entry(auth_frame, textvariable=token_var, show="•", width=40)
+        token_entry.pack(fill="x", pady=2)
+        show_var = tk.BooleanVar(value=False)
+        def _toggle_show():
+            token_entry.configure(show="" if show_var.get() else "•")
+        ttk.Checkbutton(auth_frame, text="Mostrar token", variable=show_var, command=_toggle_show).pack(anchor="w")
+        ttk.Label(auth_frame, text="O token não é salvo em disco pelo editor — use variável GITHUB_TOKEN para persistir.", font=("Segoe UI", 7), foreground="#888").pack(anchor="w")
+
+        result = {"ok": False}
+        btns = ttk.Frame(dlg, padding=12)
+        btns.pack(fill="x", side="bottom")
+        def _cancel():
+            dlg.destroy()
+        def _publish():
+            # valida remote
+            if "github.com" not in remote_url:
+                if not messagebox.askyesno("Remote não é GitHub", f"Remote atual:\n{remote_url}\n\nContinuar mesmo assim?", parent=dlg):
+                    return
+            commit_msg = msg_var.get().strip() or f"chore(catalog): update v{self.catalog.get('app',{}).get('catalog_version','')}"
+            token = token_var.get().strip()
+            # git add
+            add = self._run_git("add", str(rel))
+            if add.returncode != 0:
+                messagebox.showerror("git add falhou", add.stderr, parent=dlg)
+                return
+            # verifica se há algo para commitar
+            diff = self._run_git("diff", "--cached", "--quiet")
+            if diff.returncode == 0:
+                # nada staged (talvez já commitado)
+                staged = self._run_git("status", "--porcelain", str(rel))
+                if not staged.stdout.strip():
+                    messagebox.showinfo("Nada para publicar", "Nenhuma alteração detectada no arquivo.\nTalvez já esteja commitado.", parent=dlg)
+                    return
+            commit = self._run_git("commit", "-m", commit_msg)
+            if commit.returncode != 0 and "nothing to commit" not in (commit.stdout + commit.stderr).lower():
+                # se já commitado, ignora, senão erro
+                if "nothing to commit" not in commit.stdout.lower() and "nothing to commit" not in commit.stderr.lower():
+                    messagebox.showerror("git commit falhou", commit.stdout + "\n" + commit.stderr, parent=dlg)
+                    return
+            # push
+            self.status.set("Publicando no GitHub…")
+            dlg.update()
+            # se token informado, injeta temporariamente na URL (sem persistir)
+            push_args = ["push"]
+            env = None
+            if token:
+                # forma segura: usa extraheader com token via http.extraHeader
+                # mais simples: monta URL com token apenas para este push via credential
+                # vamos tentar push com token via askpass trick: setar GIT_ASKPASS
+                # Simplificação: altera remote url temporariamente com token
+                m = re.match(r"https://(?:.*@)?github\.com/(.+)", remote_url)
+                if m:
+                    repo_part = m.group(1)
+                    # remove possível .git duplicado
+                    tmp_url = f"https://{token}@github.com/{repo_part}"
+                    # salva remote original
+                    orig_url = remote_url
+                    self._run_git("remote", "set-url", "origin", tmp_url)
+                    push = self._run_git("push")
+                    # restaura
+                    self._run_git("remote", "set-url", "origin", orig_url)
+                else:
+                    push = self._run_git("push")
+            else:
+                push = self._run_git("push")
+            if push.returncode != 0:
+                err = push.stderr + push.stdout
+                if "authentication" in err.lower() or "401" in err or "403" in err or "could not read username" in err.lower():
+                    messagebox.showerror("Falha de autenticação", f"Push falhou por autenticação:\n\n{err}\n\n→ Crie um PAT em github.com/settings/tokens (classic, scope 'repo') e cole acima, ou faça 'gh auth login', ou rode 'git push' uma vez no terminal e salve a credencial.", parent=dlg)
+                else:
+                    messagebox.showerror("git push falhou", err, parent=dlg)
+                # desfaz commit? mantém commit local — é útil
+                self.status.set(f"Commit local ok, push falhou: {err[:80]}")
+                result["ok"] = False
+                return
+            # sucesso
+            result["ok"] = True
+            dlg.destroy()
+            # gera URL raw para nuvem
+            raw_url = ""
+            try:
+                # tenta extrair user/repo e branch
+                m = re.search(r"github\.com[:/](.+?)/(.+?)(?:\.git)?$", remote_url)
+                if m:
+                    user, repo = m.group(1), m.group(2).replace(".git", "")
+                    branch = self._run_git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "master"
+                    # arquivo relativo
+                    raw_url = f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/{rel.as_posix()}"
+            except Exception:
+                pass
+            msg = f"Publicado com sucesso!\n\nCommit: {commit_msg}\nArquivo: {rel}"
+            if raw_url:
+                msg += f"\n\nURL para usar no app (RESOURCE_HUB_CATALOG_URL ou data/catalog_url.txt):\n{raw_url}"
+                # oferece copiar
+                if messagebox.askyesno("Sucesso ☁️", msg + "\n\nCopiar URL Raw para a área de transferência?", parent=self):
+                    try:
+                        self.clipboard_clear(); self.clipboard_append(raw_url); self.update()
+                    except Exception:
+                        pass
+            else:
+                messagebox.showinfo("Sucesso ☁️", msg, parent=self)
+            self.status.set(f"Publicado: {commit_msg}")
+
+        ttk.Button(btns, text="Cancelar", command=_cancel).pack(side="right", padx=4)
+        ttk.Button(btns, text="Publicar agora", style="Accent.TButton", command=_publish).pack(side="right")
+        dlg.wait_window()
+        return result["ok"]
 
     def save_as(self) -> bool:
         path = filedialog.asksaveasfilename(parent=self, defaultextension=".json", filetypes=[("JSON", "*.json")], initialdir=str(PROJECT_ROOT))
