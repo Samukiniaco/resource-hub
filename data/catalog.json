@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "app": {
-    "catalog_version": "1.0.1",
-    "changelog": "Versão inicial do Resource Hub.\n- Suporte a Minecraft, Bibliotecas, Java e Outros/Patches.\n- Helper JavaPath para vortex_launcher.conf.\n- Atualização remota com cache offline.\n- Outros: Modpack \"Luse x Sosa\" adicionado por pedido"
+    "catalog_version": "1.0.2",
+    "changelog": "Correção da 1.0.1 -- v1.0.2:\n - Adicionado Assets para fins experimentais. (patch de correção)"
   },
   "minecraft": {
     "versions": [
@@ -138,6 +138,14 @@
       "link": "https://drive.google.com/file/d/149pTwBamikWua7SUNuAGxw4edjZK_9eS/view?usp=drive_link",
       "banner": "Google Drive",
       "warning": ""
+    },
+    {
+      "name": "Assets Recentes",
+      "description": "A pasta \"assets\" do Minecraft para todas (ou quase) para fins experimentais caso algo dê problema, launchers geralmente cuidam dessa parte.",
+      "category": "patch",
+      "link": "https://drive.google.com/drive/folders/16XnEWuwdBNuyv_mkVrUz5SLicFtqQ-pr?usp=drive_link",
+      "banner": "",
+      "warning": "Troque sua pasta \"Assets\" por esta se tiver problemas relacionados!"
     }
   ]
 }
