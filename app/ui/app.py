@@ -111,6 +111,7 @@ class MainWindow:
         self._load_cached()
         self._build_tabs()
         self.root.after(800, self.refresh_catalog)
+        self.root.after(2000, self._check_app_update)
 
     def _set_icon(self):
         try:
@@ -215,3 +216,42 @@ class MainWindow:
         if not warning:
             return
         self.root.after(1500, lambda: messagebox.showwarning("Bibliotecas", warning, parent=self.root))
+
+    def _check_app_update(self):
+        try:
+            from app.services.app_update_service import check_app_update_async
+            from app import __version__ as cur_ver
+            def _on_result(has_update, tag, url, body):
+                if not has_update:
+                    return
+                def _ui():
+                    try:
+                        dlg = tk.Toplevel(self.root)
+                        dlg.title(f"Nova versão do app — {tag}")
+                        dlg.transient(self.root); dlg.grab_set()
+                        dlg.configure(bg=COLORS["bg"])
+                        dlg.geometry("560x380")
+                        dlg.minsize(520, 340)
+                        header = tk.Frame(dlg, bg=COLORS["bg_card"])
+                        header.pack(fill="x", padx=1, pady=1)
+                        h = tk.Frame(header, bg=COLORS["bg_card"])
+                        h.pack(fill="x", padx=14, pady=12)
+                        tk.Label(h, text="⬢  Atualização do Resource Hub", bg=COLORS["bg_card"], fg=COLORS["accent"], font=FONTS["small_bold"]).pack(anchor="w")
+                        tk.Label(h, text=f"{cur_ver}  →  {tag}", bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(4, 0))
+                        tk.Label(h, text="Quem tem a versão antiga precisa atualizar o .exe para ter as novidades.", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(anchor="w", pady=(6, 0))
+                        txt = tk.Text(dlg, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=12, pady=12, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"])
+                        txt.insert("1.0", body or "Nova versão disponível no GitHub. Baixe em Releases.")
+                        txt.configure(state="disabled")
+                        txt.pack(fill="both", expand=True, padx=1, pady=0)
+                        btns = ttk.Frame(dlg, style="TFrame", padding=12)
+                        btns.pack(fill="x")
+                        def _open():
+                            open_url(url)
+                        ttk.Button(btns, text="Baixar no GitHub", style="Accent.TButton", command=_open).pack(side="right", padx=4)
+                        ttk.Button(btns, text="Depois", command=dlg.destroy).pack(side="right")
+                    except Exception as e:
+                        logger.warning("app update dialog failed: %s", e)
+                self.root.after(0, _ui)
+            check_app_update_async(_on_result)
+        except Exception as e:
+            logger.debug("app update check not available: %s", e)
