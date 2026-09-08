@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "app": {
-    "catalog_version": "1.0.2",
-    "changelog": "Correção da 1.0.1 -- v1.0.2:\n - Adicionado Assets para fins experimentais. (patch de correção)"
+    "catalog_version": "1.1.0",
+    "changelog": "1.1.0 -- Algumas correções, ferramentas novas e mais versões:\n\n- Seletor de Java (Patches), requer Python\n- Atualização dos assets\n- Atualização das bibliotecas\n- Adicionado: 1.7.10 (Forge e Vanilla), 1.12.2 (Forge e Vanilla), 1.20.1 (Forge), c0.30_01c (Vanilla *bugado*), rd-132211 (primeira versão)\n- Pack de Javas funcional com o Seletor de Java.\n- Patch de correção do Modpack da versão anterior, no caso, um listador e novas bibliotecas e assets já testados, em caso de erro, possivelmente há algo de errado com a rede, computador ou ao baixar/passar as bibliotecas e assets.\n- Jar de versões Fabric faltando (corrigido!)\n\nIrei tentar colocar uma página apenas para essas changelogs no app principal, pra mostrar o histórico a partir desta, vou tentar recuperar o changelog das anteriores.\n\nMe ajude a te ajudar, evite solicitar muita coisa, mas o site do launcher sempre terá um formulário para desbloquear seu launcher, para pedidos (como modpacks e outros) e feedback do ResourceHub, após o lançamento da v1.1.0, o site será atualizado para implementação do Resource Hub, que antes não era mencionado por questões de segurança.\n\ns4MuK1N14c0 - Evite compartilhar informações."
   },
   "minecraft": {
     "versions": [
@@ -101,6 +101,54 @@
         "banner": "Google Drive",
         "link": "https://drive.google.com/drive/folders/1TtKVMDO1LRzCzZD_zdxPvHRxt7RTKFAK?usp=drive_link",
         "warning": ""
+      },
+      {
+        "id": "1.7.10",
+        "name": "Minecraft 1.7.10: Vanilla",
+        "description": "Versão 1.7.10 padrão. (Java 8)",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1Dz8_y2nv3raabAo--ZSJCt3EErU2b0BV?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.7.10",
+        "name": "Minecraft 1.7.10: Forge",
+        "description": "Versão 1.7.10 com Forge 10.13.4.1614! Um clássico!",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1UsfZwsxcX-gF8AtnCzIe_NQBV0R67jzr?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "c0.30_01c",
+        "name": "Minecraft 0.30_01c: Beta Vanilla",
+        "description": "A clássica versão com mobs diferenciados! (Java 8)",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1kwbXfUSsFF-q2sDYN4M_twADrpw3JQUb?usp=drive_link",
+        "warning": "Pode ser um pouco bugado e travar seu jogo ao aumentar a renderização."
+      },
+      {
+        "id": "1.12.2",
+        "name": "Minecraft 1.12.2: Vanilla",
+        "description": "Versão 1.12.2 padrão. Usa Java 8+",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1R19LVzxI9f0ggHQNEGW0Xczsy9_QhwhX?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "1.12.2",
+        "name": "Minecraft 1.12.2: Forge",
+        "description": "Versão 1.12.2 com Forge 12.23.5.2859!\nEssa foi pra mim, amo os mods dessa versão.",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1g7BCa6KiD_31T3B0nya1Wr8Zuv58DBrW?usp=drive_link",
+        "warning": ""
+      },
+      {
+        "id": "rd-132211",
+        "name": "Minecraft rd-132211: Classic Vanilla",
+        "description": "A primeiríssima versão do Minecraft! (Java 8)",
+        "banner": "",
+        "link": "https://drive.google.com/drive/folders/1mGwPxnvvdhZXYkC5LcMGn1QoQ4jDwWwL?usp=drive_link",
+        "warning": ""
       }
     ]
   },
@@ -108,7 +156,7 @@
     "name": "Bibliotecas Compartilhadas",
     "description": "Pacote global de bibliotecas compartilhadas entre todas as versões. Instale uma única vez.",
     "link": "https://drive.google.com/drive/folders/1wMsVs9SDrX33Z-a-RBQOx7pb9Wp2VL1J?usp=drive_link",
-    "warning": "V1.0.1!! Atualize todas as bibliotecas de uma vez para que não haja problemas em quaisquer versões que estejam aqui (outras versões adicionadas externamente podem não funcionar)",
+    "warning": "V1.1.0!! Atualize todas as bibliotecas de uma vez para que não haja problemas em quaisquer versões que estejam aqui (outras versões adicionadas externamente podem não funcionar)",
     "banner": ""
   },
   "java": [
@@ -126,7 +174,7 @@
     }
   ],
   "launcher": {
-    "name": "Vortex Launcher",
+    "name": "Launcher (Bloqueado!)",
     "description": "Launcher externo — este app não o modifica nem distribui.",
     "link": "https://sites.google.com/view/ultimateprxydef"
   },
@@ -145,7 +193,15 @@
       "category": "patch",
       "link": "https://drive.google.com/drive/folders/16XnEWuwdBNuyv_mkVrUz5SLicFtqQ-pr?usp=drive_link",
       "banner": "",
-      "warning": "Troque sua pasta \"Assets\" por esta se tiver problemas relacionados!"
+      "warning": "Troque sua pasta \"Assets\" por esta se tiver problemas relacionados! (Update na 1.1.0!)"
+    },
+    {
+      "name": "Seletor de Java",
+      "description": "Ferramenta que altera no VLauncher automaticamente a versão do Java com base numa pasta que você seleciona, muito útil para evitar copiar e colar caminhos, requer Python instalado.",
+      "category": "tool",
+      "link": "https://drive.google.com/file/d/1mFkdPR7q4N4UMO8othKs76tGr136inPl/view?usp=drive_link",
+      "banner": "",
+      "warning": ""
     }
   ]
 }
