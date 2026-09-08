@@ -396,8 +396,10 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     btns = tk.Frame(dlg, bg=dlg.cget("bg"))
     btns.pack(fill="x", padx=12, pady=12)
     def _apply():
-        # persiste
-        save_theme(selected_mode.get(), {k: preview_colors[k] for k in EDITABLE_KEYS if k in preview_colors})
+        # persiste TODAS as cores do preview (não só EDITABLE_KEYS, senão fundo volta ao mesmo)
+        from app.services.theme_service import DEFAULT_DARK as _DD, HEX_RE as _HEX
+        full = {k: v for k, v in preview_colors.items() if k in _DD and isinstance(v, str) and _HEX.match(v.strip())}
+        save_theme(selected_mode.get(), full)
         apply_theme(parent)
         try:
             # reconstrói tabs se possível

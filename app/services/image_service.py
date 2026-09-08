@@ -189,8 +189,8 @@ def _banner_cache_key(title: str, max_size: tuple[int, int]) -> str:
     h = hashlib.sha256(title.encode("utf-8")).hexdigest()[:8]
     return f"__auto_banner__{h}_{max_size[0]}x{max_size[1]}"
 
-def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Optional[object]:
-    """Gera banner procedural bonito (fallback se rede falhar) — anime-light / minecraft."""
+def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (960, 200)) -> Optional[object]:
+    """Gera banner procedural bonito (fallback se rede falhar) — usa gradiente do tema."""
     if not HAS_PIL:
         return get_placeholder_tk(max_size)
     key = _banner_cache_key(title, max_size)
@@ -209,14 +209,35 @@ def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Op
             return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
         w, h = max_size
-        img = Image.new("RGB", (w, h), _hex_to_rgb(bg))
-        draw = __import__("PIL.ImageDraw", fromlist=["ImageDraw"]).ImageDraw.Draw(img)
+        # gradiente vertical bg -> bg_top + faixa accent, varia por tema
         try:
+            bg_top = colors.get("bg_top", bg)
+            c1 = _hex_to_rgb(bg)
+            c2 = _hex_to_rgb(bg_top)
+            img = Image.new("RGB", (w, h), c1)
+            draw = __import__("PIL.ImageDraw", fromlist=["ImageDraw"]).ImageDraw.Draw(img)
+            for y in range(h):
+                t = y / max(1, h - 1)
+                rr = int(c1[0] + (c2[0] - c1[0]) * t)
+                gg = int(c1[1] + (c2[1] - c1[1]) * t)
+                bb = int(c1[2] + (c2[2] - c1[2]) * t)
+                draw.line((0, y, w, y), fill=(rr, gg, bb))
+            # linhas diagonais sutis com accent_subtle
+            try:
+                sub = _hex_to_rgb(colors.get("accent_subtle", accent))
+                for x in range(0, w, 46):
+                    draw.line((x, 0, x + 24, h), fill=sub, width=1)
+            except Exception:
+                pass
             ar, ag, ab = _hex_to_rgb(accent)
-            for y in range(4):
+            for y in range(5):
+                draw.line((0, y, w, y), fill=(ar, ag, ab))
+            # linha inferior accent fina
+            for y in range(h - 2, h):
                 draw.line((0, y, w, y), fill=(ar, ag, ab))
         except Exception:
-            pass
+            img = Image.new("RGB", (w, h), _hex_to_rgb(bg))
+            draw = __import__("PIL.ImageDraw", fromlist=["ImageDraw"]).ImageDraw.Draw(img)
         short = title[:42] + ("…" if len(title) > 42 else "")
         try:
             from PIL import ImageFont

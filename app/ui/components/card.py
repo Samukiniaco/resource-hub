@@ -22,9 +22,12 @@ class ResourceCard(tk.Frame):
         self.card.pack(fill="both", expand=True, padx=1, pady=1)
         self.card.columnconfigure(0, weight=1)
 
+        # faixa accent no topo do card — varia por tema
+        self._accent_bar = tk.Frame(self.card, bg=COLORS["accent"], height=3, bd=0, highlightthickness=0)
+        self._accent_bar.grid(row=0, column=0, sticky="ew")
         # header: dot + title
         header = tk.Frame(self.card, bg=COLORS["bg_card"])
-        header.grid(row=0, column=0, sticky="ew", padx=14, pady=(12, 4))
+        header.grid(row=1, column=0, sticky="ew", padx=14, pady=(12, 4))
         dot_color = COLORS["accent"] if self.link and is_valid_http_url(self.link) else COLORS["border_light"]
         tk.Label(header, text="●", fg=dot_color, bg=COLORS["bg_card"], font=("Segoe UI", 7)).pack(side="left", padx=(0, 8))
         tk.Label(header, text=title, bg=COLORS["bg_card"], fg=COLORS["text_primary"], font=FONTS["title"],
@@ -33,15 +36,15 @@ class ResourceCard(tk.Frame):
         # description
         if description:
             tk.Label(self.card, text=description, bg=COLORS["bg_card"], fg=COLORS["text_secondary"],
-                     font=FONTS["body"], wraplength=620, justify="left", anchor="w").grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
+                     font=FONTS["body"], wraplength=620, justify="left", anchor="w").grid(row=2, column=0, sticky="w", padx=14, pady=(0, 8))
         else:
             tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
-                     font=FONTS["small"]).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
+                     font=FONTS["small"]).grid(row=2, column=0, sticky="w", padx=14, pady=(0, 8))
 
         # banner — se catalog tem URL válida usa ela, senão carrossel da internet (sem repetir)
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
-        self.banner_label.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
+        self.banner_label.grid(row=3, column=0, sticky="ew", padx=0, pady=(0, 8))
         if self.banner_url and is_valid_http_url(self.banner_url):
             self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
@@ -58,7 +61,7 @@ class ResourceCard(tk.Frame):
             else:
                 # fallback procedural local
                 try:
-                    auto = get_auto_banner_tk(title, max_size=(620, 170))
+                    auto = get_auto_banner_tk(title, max_size=(960, 200))
                     if auto:
                         self.banner_label.configure(image=auto, text="", compound="center")
                         self.banner_label.image = auto
@@ -70,7 +73,7 @@ class ResourceCard(tk.Frame):
         # warning
         if warning:
             wf = tk.Frame(self.card, bg=COLORS["warning_bg"], highlightbackground=COLORS["warning_border"], highlightthickness=1, bd=0)
-            wf.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 10))
+            wf.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 10))
             inner = tk.Frame(wf, bg=COLORS["warning_bg"])
             inner.pack(fill="x", padx=8, pady=6)
             tk.Label(inner, text="⚠  " + warning, bg=COLORS["warning_bg"], fg=COLORS["warning_fg"],
@@ -78,11 +81,11 @@ class ResourceCard(tk.Frame):
 
         # separator
         sep = tk.Frame(self.card, bg=COLORS["border"], height=1, bd=0, highlightthickness=0)
-        sep.grid(row=4, column=0, sticky="ew", padx=14, pady=(2, 10))
+        sep.grid(row=5, column=0, sticky="ew", padx=14, pady=(2, 10))
 
         # buttons row
         btn_frame = tk.Frame(self.card, bg=COLORS["bg_card"])
-        btn_frame.grid(row=5, column=0, sticky="ew", padx=14, pady=(0, 12))
+        btn_frame.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 12))
         left = tk.Frame(btn_frame, bg=COLORS["bg_card"])
         left.pack(side="left")
         right = tk.Frame(btn_frame, bg=COLORS["bg_card"])
@@ -129,7 +132,7 @@ class ResourceCard(tk.Frame):
                         self.banner_label.configure(image=tk_img, text="", compound="center")
                         self.banner_label.image = tk_img
                     else:
-                        auto = get_auto_banner_tk(title, max_size=(620, 170))
+                        auto = get_auto_banner_tk(title, max_size=(960, 200))
                         if auto:
                             self.banner_label.configure(image=auto, text="", compound="center")
                             self.banner_label.image = auto
@@ -141,7 +144,7 @@ class ResourceCard(tk.Frame):
                 self.after(0, _apply)
             except tk.TclError:
                 pass
-        fetch_image_async(url, _cb, max_size=(620, 170))
+        fetch_image_async(url, _cb, max_size=(960, 200))
 
     def _on_open(self):
         if not self.link:

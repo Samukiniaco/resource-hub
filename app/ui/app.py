@@ -34,6 +34,10 @@ class MainWindow:
         # Top bar — branding
         top = tk.Frame(self.root, bg=COLORS["bg_top"], bd=0, highlightthickness=0)
         top.pack(fill="x")
+        self._top = top
+        # faixa accent sob o topo — muda por tema
+        self._top_accent = tk.Frame(self.root, bg=COLORS["accent"], height=3, bd=0, highlightthickness=0)
+        self._top_accent.pack(fill="x")
         # logo + title
         left = tk.Frame(top, bg=COLORS["bg_top"])
         left.pack(side="left", padx=12, pady=8)
@@ -63,7 +67,7 @@ class MainWindow:
                         self._theme_unlocked = True
                         try:
                             from app.ui.theme_editor import open_theme_editor
-                            open_theme_editor(self.root, on_apply=lambda: (apply_theme(self.root), self._build_tabs()))
+                            open_theme_editor(self.root, on_apply=self._refresh_theme)
                         except Exception as ex:
                             logger.warning("theme editor failed: %s", ex)
                             self.status_var.set(f"Tema: erro {ex}")
@@ -73,7 +77,7 @@ class MainWindow:
                 def _open_theme_shortcut(e=None):
                     try:
                         from app.ui.theme_editor import open_theme_editor
-                        open_theme_editor(self.root, on_apply=lambda: (apply_theme(self.root), self._build_tabs()))
+                        open_theme_editor(self.root, on_apply=self._refresh_theme)
                     except Exception as ex:
                         logger.warning("theme shortcut failed: %s", ex)
                     return "break"
@@ -132,6 +136,22 @@ class MainWindow:
         else:
             self.status_var.set(err or "Sem catálogo local")
             self.dot_label.configure(fg=COLORS["status_warn"])
+
+    def _refresh_theme(self):
+        """Aplica tema no chrome (topo) + rebuild tabs — fundo não fica mais igual."""
+        apply_theme(self.root)
+        try:
+            self._top.configure(bg=COLORS["bg_top"])
+            self._top_accent.configure(bg=COLORS["accent"])
+            for child in self._top.winfo_children():
+                try:
+                    child.configure(bg=COLORS["bg_top"])
+                except Exception:
+                    pass
+            self.root.configure(bg=COLORS["bg"])
+        except Exception:
+            pass
+        self._build_tabs()
 
     def _build_tabs(self):
         for tab_id in self.notebook.tabs():
