@@ -46,7 +46,7 @@ class ResourceCard(tk.Frame):
             self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
         else:
-            # carrossel (picsum/unsplash) — puxa da internet, random sem repetir seguida
+            # carrossel anime — puxa da internet, random sem repetir seguida
             carousel_url = None
             try:
                 carousel_url = get_next_banner_url()
@@ -125,7 +125,7 @@ class ResourceCard(tk.Frame):
                 try:
                     if tk_img is not None:
                         # se for placeholder genérico e tínhamos fallback, tenta auto procedural como fallback melhor
-                        # Mas picsum sempre retorna imagem, então ok
+                        # Mas carrossel sempre retorna imagem, então ok
                         self.banner_label.configure(image=tk_img, text="", compound="center")
                         self.banner_label.image = tk_img
                     else:

@@ -250,61 +250,100 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         except Exception:
             pass
 
+    def _render_results(items):
+        for w in previews_frame.winfo_children():
+            w.destroy()
+        if not items:
+            tk.Label(previews_frame, text="Nada encontrado — tente 'maid', 'school_uniform' ou cole URL do Google Imagens abaixo.", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7), wraplength=440, justify="left").pack(anchor="w")
+            return
+        for it in items:
+            url = it["url"] if isinstance(it, dict) else it
+            dom = it.get("dominant", "") if isinstance(it, dict) else ""
+            src = it.get("source", "") if isinstance(it, dict) else ""
+            row = tk.Frame(previews_frame, bg=dlg.cget("bg"), highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+            row.pack(fill="x", pady=2)
+            thumb = tk.Label(row, bg=dlg.cget("bg"), width=12, height=4, text="…", font=("Segoe UI", 6))
+            thumb.pack(side="left", padx=4, pady=2)
+            try:
+                from app.services.image_service import fetch_image_async
+                def _make_cb2(lbl=thumb, u=url):
+                    def _cb(img):
+                        def _apply():
+                            try:
+                                if img:
+                                    lbl.configure(image=img, text="", width=80, height=20)
+                                    lbl.image = img
+                            except tk.TclError:
+                                pass
+                        try:
+                            dlg.after(0, _apply)
+                        except tk.TclError:
+                            pass
+                    return _cb
+                fetch_image_async(url, _make_cb2(), max_size=(80, 20))
+            except Exception:
+                pass
+            mid = tk.Frame(row, bg=dlg.cget("bg"))
+            mid.pack(side="left", fill="x", expand=True)
+            tk.Label(mid, text=url[:52] + "…", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Consolas", 6), anchor="w").pack(anchor="w")
+            sub = f"{src} {dom}".strip()
+            if sub:
+                lr = tk.Frame(mid, bg=dlg.cget("bg"))
+                lr.pack(anchor="w")
+                if dom:
+                    tk.Label(lr, text="  ", bg=dom, width=2, font=("Segoe UI", 6)).pack(side="left", padx=(0, 4))
+                tk.Label(lr, text=sub, bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 6)).pack(side="left")
+            def _add(u=url):
+                from app.services.banner_carousel import load_carousel as _lc
+                if len(_lc()) >= 15:
+                    messagebox.showwarning("Limite", "Máximo 15 imagens no carrossel.", parent=dlg)
+                    return
+                from app.services.banner_carousel import add_to_carousel as _add
+                ok = _add(u)
+                if ok:
+                    _refresh_current_list()
+                else:
+                    messagebox.showinfo("Já existe", "Imagem já no carrossel.", parent=dlg)
+            ttk.Button(row, text="＋ Adicionar", width=10, command=_add).pack(side="right", padx=4)
+
     def _do_search():
+        import threading
         q = carousel_search_var.get().strip() or "anime"
         for w in previews_frame.winfo_children():
             w.destroy()
-        tk.Label(previews_frame, text=f"Buscando '{q}'…", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7)).pack(anchor="w")
-        try:
-            from app.services.banner_carousel import search_image_urls, add_to_carousel, load_carousel
-            urls = search_image_urls(q, count=6)
-            for w in previews_frame.winfo_children():
-                w.destroy()
-            for url in urls:
-                row = tk.Frame(previews_frame, bg=dlg.cget("bg"), highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
-                row.pack(fill="x", pady=2)
-                thumb = tk.Label(row, bg=dlg.cget("bg"), width=12, height=4, text="…", font=("Segoe UI", 6))
-                thumb.pack(side="left", padx=4, pady=2)
+        loading_lbl = tk.Label(previews_frame, text=f"Buscando '{q}' em NekosAPI + Safebooru…", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7))
+        loading_lbl.pack(anchor="w")
+        search_btn.configure(state="disabled")
+        def _work():
+            try:
+                from app.services.banner_carousel import search_image_detailed
+                items = search_image_detailed(q, count=6)
+            except Exception as e:
+                items = []
+                err = str(e)
+            def _ui():
                 try:
-                    from app.services.image_service import fetch_image_async
-                    def _make_cb2(lbl=thumb, u=url):
-                        def _cb(img):
-                            def _apply():
-                                try:
-                                    if img:
-                                        lbl.configure(image=img, text="", width=80, height=20)
-                                        lbl.image = img
-                                except tk.TclError:
-                                    pass
-                            try:
-                                dlg.after(0, _apply)
-                            except tk.TclError:
-                                pass
-                        return _cb
-                    fetch_image_async(url, _make_cb2(), max_size=(80, 20))
+                    search_btn.configure(state="normal")
                 except Exception:
                     pass
-                tk.Label(row, text=url[:50] + "…", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Consolas", 6), anchor="w").pack(side="left", fill="x", expand=True)
-                def _add(u=url):
-                    from app.services.banner_carousel import load_carousel as _lc
-                    if len(_lc()) >= 15:
-                        messagebox.showwarning("Limite", "Máximo 15 imagens no carrossel.", parent=dlg)
-                        return
-                    from app.services.banner_carousel import add_to_carousel as _add
-                    ok = _add(u)
-                    if ok:
-                        _refresh_current_list()
-                    else:
-                        messagebox.showinfo("Já existe", "Imagem já no carrossel.", parent=dlg)
-                ttk.Button(row, text="＋ Adicionar", width=10, command=_add).pack(side="right", padx=4)
-        except Exception as e:
-            for w in previews_frame.winfo_children():
-                w.destroy()
-            tk.Label(previews_frame, text=f"Erro: {e}", bg=dlg.cget("bg"), fg=COLORS["error"], font=("Segoe UI", 7)).pack(anchor="w")
+                if not items:
+                    for w in previews_frame.winfo_children():
+                        w.destroy()
+                    tk.Label(previews_frame, text="Nada encontrado — tente 'maid' ou cole URL manual abaixo.", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7), wraplength=440).pack(anchor="w")
+                    return
+                _render_results(items)
+            try:
+                dlg.after(0, _ui)
+            except tk.TclError:
+                pass
+        threading.Thread(target=_work, daemon=True).start()
 
-    ttk.Button(search_row, text="Buscar", width=8, command=_do_search).pack(side="left", padx=4)
-    ttk.Button(search_row, text="Limpar", width=6, command=lambda: [save for save in []]).pack(side="left")
-    # botão limpar carrossel
+    search_btn = ttk.Button(search_row, text="Buscar", width=8, command=_do_search)
+    search_btn.pack(side="left", padx=4)
+    def _clear_search():
+        for w in previews_frame.winfo_children():
+            w.destroy()
+    ttk.Button(search_row, text="Limpar", width=6, command=_clear_search).pack(side="left")
     def _clear_carousel():
         if messagebox.askyesno("Limpar", "Remover todas as 15 imagens do carrossel?", parent=dlg):
             try:
@@ -314,6 +353,29 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
             except Exception as e:
                 messagebox.showerror("Erro", str(e), parent=dlg)
     ttk.Button(search_row, text="Esvaziar", width=8, command=_clear_carousel).pack(side="left", padx=2)
+
+    # Manual — Google Imagens sem API: cole o endereço aqui
+    manual_row = tk.Frame(carousel_frame, bg=dlg.cget("bg"))
+    manual_row.pack(fill="x", pady=4)
+    tk.Label(manual_row, text="URL manual (Google Imagens → botão direito → copiar endereço):", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7)).pack(anchor="w")
+    manual_var = tk.StringVar()
+    manual_entry = ttk.Entry(manual_row, textvariable=manual_var, font=("Segoe UI", 7))
+    manual_entry.pack(side="left", fill="x", expand=True, padx=(0, 4))
+    def _add_manual():
+        u = manual_var.get().strip()
+        if not u.startswith("http"):
+            messagebox.showwarning("URL inválida", "Cole uma URL http(s) direta de imagem (Google → copiar endereço da imagem).", parent=dlg)
+            return
+        from app.services.banner_carousel import load_carousel as _lc, add_to_carousel as _ad
+        if len(_lc()) >= 15:
+            messagebox.showwarning("Limite", "Máximo 15 imagens.", parent=dlg)
+            return
+        if _ad(u):
+            manual_var.set("")
+            _refresh_current_list()
+        else:
+            messagebox.showinfo("Já existe", "Imagem já no carrossel.", parent=dlg)
+    ttk.Button(manual_row, text="＋ Adicionar URL", width=14, command=_add_manual).pack(side="left")
 
     _refresh_current_list()
 
