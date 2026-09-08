@@ -1,34 +1,11 @@
-"""Modern dark theme — polido, leve e não-editor."""
+"""Modern theme — suporta dark/light/anime presets + custom via theme_service."""
 import tkinter as tk
 from tkinter import ttk
 
-COLORS = {
-    "bg": "#121214",
-    "bg_top": "#1a1a1d",
-    "bg_card": "#1e1e22",
-    "bg_card_hover": "#252529",
-    "border": "#2a2a2e",
-    "border_light": "#333338",
-    "accent": "#2f80ed",
-    "accent_hover": "#3b8bfa",
-    "accent_press": "#1f6bd6",
-    "accent_subtle": "#1c2333",
-    "text_primary": "#f2f2f3",
-    "text_secondary": "#b8b8bb",
-    "text_muted": "#7c7c80",
-    "text_dim": "#5e5e62",
-    "warning_bg": "#2e2500",
-    "warning_fg": "#ffd233",
-    "warning_border": "#6b5200",
-    "success": "#3fb950",
-    "error": "#f85149",
-    "scroll_trough": "#1a1a1d",
-    "scroll_thumb": "#3a3a3f",
-    "scroll_thumb_hover": "#4a4a50",
-    "status_ok": "#3fb950",
-    "status_warn": "#d29922",
-    "status_err": "#f85149",
-}
+from app.services.theme_service import get_colors as _get_theme_colors, DEFAULT_DARK
+
+# COLORS é mutável e reflete o tema atual (dark/light/custom)
+COLORS = dict(_get_theme_colors())
 
 FONTS = {
     "title": ("Segoe UI", 11, "bold"),
@@ -41,7 +18,26 @@ FONTS = {
     "brand": ("Segoe UI", 10, "bold"),
 }
 
-def apply_theme(root: tk.Tk) -> None:
+def reload_colors() -> None:
+    """Recarrega COLORS do disco (theme.json) — útil após salvar tema."""
+    from app.services.theme_service import get_colors
+    new = get_colors()
+    COLORS.clear()
+    COLORS.update(new)
+
+def apply_theme(root: tk.Tk, override: dict | None = None) -> None:
+    # se override for passado (preview), mescla sobre COLORS sem persistir
+    if override:
+        # preview: não altera arquivo, só aplica visualmente
+        preview = dict(COLORS)
+        for k, v in override.items():
+            if k in DEFAULT_DARK:
+                preview[k] = v
+        colors = preview
+    else:
+        reload_colors()
+        colors = COLORS
+
     style = ttk.Style(root)
     try:
         style.theme_use("clam")
@@ -49,92 +45,89 @@ def apply_theme(root: tk.Tk) -> None:
         pass
 
     # frames
-    style.configure("TFrame", background=COLORS["bg"])
-    style.configure("Top.TFrame", background=COLORS["bg_top"])
-    style.configure("Card.TFrame", background=COLORS["bg_card"], relief="flat")
-    style.configure("CardInner.TFrame", background=COLORS["bg_card"])
-    style.configure("Muted.TFrame", background=COLORS["bg"], relief="flat")
+    style.configure("TFrame", background=colors["bg"])
+    style.configure("Top.TFrame", background=colors["bg_top"])
+    style.configure("Card.TFrame", background=colors["bg_card"], relief="flat")
+    style.configure("CardInner.TFrame", background=colors["bg_card"])
+    style.configure("Muted.TFrame", background=colors["bg"], relief="flat")
 
     # labels
-    style.configure("TLabel", background=COLORS["bg"], foreground=COLORS["text_primary"], font=FONTS["body"])
-    style.configure("Top.TLabel", background=COLORS["bg_top"], foreground=COLORS["text_primary"])
-    style.configure("Muted.TLabel", background=COLORS["bg"], foreground=COLORS["text_muted"])
-    style.configure("Card.TLabel", background=COLORS["bg_card"], foreground=COLORS["text_primary"])
-    style.configure("CardSecondary.TLabel", background=COLORS["bg_card"], foreground=COLORS["text_secondary"])
-    style.configure("CardMuted.TLabel", background=COLORS["bg_card"], foreground=COLORS["text_muted"])
-    style.configure("Brand.TLabel", background=COLORS["bg_top"], foreground=COLORS["text_primary"], font=FONTS["brand"])
-    style.configure("BrandSub.TLabel", background=COLORS["bg_top"], foreground=COLORS["text_muted"], font=FONTS["small"])
-    style.configure("Header.TLabel", background=COLORS["bg"], foreground=COLORS["text_primary"], font=FONTS["title"])
-    style.configure("Section.TLabel", background=COLORS["bg"], foreground=COLORS["text_muted"], font=FONTS["small_bold"])
+    style.configure("TLabel", background=colors["bg"], foreground=colors["text_primary"], font=FONTS["body"])
+    style.configure("Top.TLabel", background=colors["bg_top"], foreground=colors["text_primary"])
+    style.configure("Muted.TLabel", background=colors["bg"], foreground=colors["text_muted"])
+    style.configure("Card.TLabel", background=colors["bg_card"], foreground=colors["text_primary"])
+    style.configure("CardSecondary.TLabel", background=colors["bg_card"], foreground=colors["text_secondary"])
+    style.configure("CardMuted.TLabel", background=colors["bg_card"], foreground=colors["text_muted"])
+    style.configure("Brand.TLabel", background=colors["bg_top"], foreground=colors["text_primary"], font=FONTS["brand"])
+    style.configure("BrandSub.TLabel", background=colors["bg_top"], foreground=colors["text_muted"], font=FONTS["small"])
+    style.configure("Header.TLabel", background=colors["bg"], foreground=colors["text_primary"], font=FONTS["title"])
+    style.configure("Section.TLabel", background=colors["bg"], foreground=colors["text_muted"], font=FONTS["small_bold"])
 
-    # notebook — abas maiores, borda arredondada visual
-    style.configure("TNotebook", background=COLORS["bg"], borderwidth=0, tabmargins=[6, 6, 6, 0])
+    # notebook
+    style.configure("TNotebook", background=colors["bg"], borderwidth=0, tabmargins=[6, 6, 6, 0])
     style.configure("TNotebook.Tab",
-                    background=COLORS["bg_top"],
-                    foreground=COLORS["text_muted"],
+                    background=colors["bg_top"],
+                    foreground=colors["text_muted"],
                     padding=[14, 8],
                     font=FONTS["small_bold"],
                     borderwidth=0,
-                    focuscolor=COLORS["bg"])
+                    focuscolor=colors["bg"])
     style.map("TNotebook.Tab",
-              background=[("selected", COLORS["bg_card"]), ("active", "#222226")],
-              foreground=[("selected", COLORS["text_primary"]), ("active", COLORS["text_secondary"])],
+              background=[("selected", colors["bg_card"]), ("active", colors["bg_card_hover"])],
+              foreground=[("selected", colors["text_primary"]), ("active", colors["text_secondary"])],
               expand=[("selected", [1, 1, 1, 0])])
 
     # buttons
     style.configure("Accent.TButton",
-                    background=COLORS["accent"],
+                    background=colors["accent"],
                     foreground="white",
                     font=("Segoe UI", 9, "bold"),
                     padding=(14, 6),
                     borderwidth=0,
                     relief="flat")
     style.map("Accent.TButton",
-              background=[("active", COLORS["accent_hover"]), ("pressed", COLORS["accent_press"]), ("disabled", "#2a2a2e")],
-              foreground=[("disabled", COLORS["text_dim"])])
+              background=[("active", colors["accent_hover"]), ("pressed", colors["accent_press"]), ("disabled", colors["border"])],
+              foreground=[("disabled", colors["text_dim"])])
 
     style.configure("Secondary.TButton",
-                    background="#232326",
-                    foreground=COLORS["text_primary"],
+                    background=colors["bg_top"],
+                    foreground=colors["text_primary"],
                     font=("Segoe UI", 9),
                     padding=(14, 6),
                     borderwidth=1,
                     relief="flat",
-                    bordercolor=COLORS["border"])
+                    bordercolor=colors["border"])
     style.map("Secondary.TButton",
-              background=[("active", "#2a2a2e"), ("pressed", "#1e1e22")],
-              bordercolor=[("active", COLORS["border_light"])],
-              foreground=[("disabled", COLORS["text_dim"])])
+              background=[("active", colors["border"]), ("pressed", colors["bg"])],
+              bordercolor=[("active", colors["border_light"])],
+              foreground=[("disabled", colors["text_dim"])])
 
     style.configure("Ghost.TButton",
-                    background=COLORS["bg_top"],
-                    foreground=COLORS["text_muted"],
+                    background=colors["bg_top"],
+                    foreground=colors["text_muted"],
                     font=FONTS["small"],
                     padding=(10, 4),
                     borderwidth=0)
     style.map("Ghost.TButton",
-              foreground=[("active", COLORS["text_primary"])],
-              background=[("active", "#252529")])
+              foreground=[("active", colors["text_primary"])],
+              background=[("active", colors["bg_card_hover"])])
 
-    # scrollbar moderna — visível, não decorativa
+    # scrollbar
     style.configure("Modern.Vertical.TScrollbar",
-                    background=COLORS["bg"],
-                    troughcolor=COLORS["scroll_trough"],
-                    bordercolor=COLORS["bg"],
-                    arrowcolor=COLORS["text_muted"],
+                    background=colors["bg"],
+                    troughcolor=colors["scroll_trough"],
+                    bordercolor=colors["bg"],
+                    arrowcolor=colors["text_muted"],
                     relief="flat",
                     borderwidth=0,
                     arrowsize=0,
                     width=10)
     style.map("Modern.Vertical.TScrollbar",
-              background=[("active", COLORS["scroll_thumb_hover"]), ("!active", COLORS["scroll_thumb"])],
-              troughcolor=[("!active", COLORS["scroll_trough"])])
+              background=[("active", colors["scroll_thumb_hover"]), ("!active", colors["scroll_thumb"])],
+              troughcolor=[("!active", colors["scroll_trough"])])
 
-    # separator
-    style.configure("TSeparator", background=COLORS["border"])
-
-    root.configure(bg=COLORS["bg"])
-    # melhora renderização de fontes no Windows
+    style.configure("TSeparator", background=colors["border"])
+    root.configure(bg=colors["bg"])
     try:
         root.option_add("*Font", FONTS["body"])
     except tk.TclError:

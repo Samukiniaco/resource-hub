@@ -6,17 +6,28 @@ Catalog URL is configurable via:
 3) fallback constant DEFAULT_CATALOG_URL
 
 Paths are resolved relative to project root (parent of app/).
+Suporta PyInstaller frozen (sys.executable).
 """
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 # --- Project paths ---
-APP_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = APP_DIR.parent
+if getattr(sys, "frozen", False):
+    # Compilado: exe em .../ResourceHub/, dados graváveis ao lado do exe
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+    # assets podem estar dentro do bundle (_MEIPASS) no modo onefile
+    _bundle = Path(getattr(sys, "_MEIPASS", str(PROJECT_ROOT)))
+    _bundle_assets = _bundle / "assets"
+    ASSETS_DIR = _bundle_assets if _bundle_assets.exists() else PROJECT_ROOT / "assets"
+else:
+    APP_DIR = Path(__file__).resolve().parent
+    PROJECT_ROOT = APP_DIR.parent
+    ASSETS_DIR = PROJECT_ROOT / "assets"
+
 DATA_DIR = PROJECT_ROOT / "data"
-ASSETS_DIR = PROJECT_ROOT / "assets"
 CACHE_DIR = DATA_DIR
 
 CATALOG_CACHE_PATH = CACHE_DIR / "catalog.json"
@@ -24,6 +35,10 @@ CATALOG_TMP_PATH = CACHE_DIR / "catalog.tmp.json"
 CATALOG_URL_FILE = CACHE_DIR / "catalog_url.txt"
 IMAGE_CACHE_DIR = CACHE_DIR / "image_cache"
 VORTEX_CONF_NAME = "vortex_launcher.conf"
+THEME_PATH = DATA_DIR / "theme.json"
+THEME_CUSTOM_HEADER = DATA_DIR / "header_bg.custom.png"
+HISTORY_CACHE_PATH = CACHE_DIR / "history_cache.json"
+GITHUB_API_URL = "https://api.github.com/repos/Samukiniaco/resource-hub/commits"
 
 # --- Remote catalog ---
 DEFAULT_CATALOG_URL = "https://raw.githubusercontent.com/Samukiniaco/resource-hub/master/data/catalog.json"

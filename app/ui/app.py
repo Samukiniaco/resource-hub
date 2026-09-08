@@ -9,6 +9,7 @@ from app.services.catalog_service import load_cached_catalog, update_async
 from app.ui.styles import apply_theme, COLORS, FONTS
 from app.utils.browser import open_url
 from app.utils.logger import get_logger
+from app.services.theme_service import get_colors as _get_theme_colors
 from app.ui.tabs.minecraft_tab import build_minecraft_tab
 from app.ui.tabs.libraries_tab import build_libraries_tab
 from app.ui.tabs.java_tab import build_java_tab
@@ -45,20 +46,39 @@ class MainWindow:
                 self._icon_img = ImageTk.PhotoImage(img)
                 self._logo_label = tk.Label(left, image=self._icon_img, bg=COLORS["bg_top"], bd=0, cursor="hand2")
                 self._logo_label.pack(side="left", padx=(0, 8))
-                # tema livre: easter egg ao clicar 5x no logo
+                # easter egg + tema escondido: 5 cliques toast, 7 cliques abre editor
                 self._logo_clicks = 0
+                self._theme_unlocked = False
                 def _egg(e=None):
                     self._logo_clicks += 1
-                    if self._logo_clicks >= 5:
-                        self._logo_clicks = 0
+                    if self._logo_clicks == 5:
                         try:
-                            # confete sutil + mensagem
-                            self.status_var.set("☕ Tema livre: você encontrou o easter egg! — 'Stay hydrated & keep crafting' ✨")
+                            self.status_var.set("☕ Você encontrou o easter egg! — 2 cliques mais para o editor de tema ✨")
                             self.dot_label.configure(fg=COLORS["accent"])
-                            self.root.after(4000, lambda: self.status_var.set(f"Catálogo local v{self.catalog.catalog_version} carregado" if self.catalog else "Pronto."))
+                            self.root.after(3500, lambda: self.status_var.set(f"Catálogo local v{self.catalog.catalog_version} carregado" if self.catalog else "Pronto."))
                         except Exception:
                             pass
+                    elif self._logo_clicks >= 7:
+                        self._logo_clicks = 0
+                        self._theme_unlocked = True
+                        try:
+                            from app.ui.theme_editor import open_theme_editor
+                            open_theme_editor(self.root, on_apply=lambda: (apply_theme(self.root), self._build_tabs()))
+                        except Exception as ex:
+                            logger.warning("theme editor failed: %s", ex)
+                            self.status_var.set(f"Tema: erro {ex}")
+                        return
                 self._logo_label.bind("<Button-1>", _egg)
+                # atalho secreto Ctrl+Shift+T após desbloquear ou direto
+                def _open_theme_shortcut(e=None):
+                    try:
+                        from app.ui.theme_editor import open_theme_editor
+                        open_theme_editor(self.root, on_apply=lambda: (apply_theme(self.root), self._build_tabs()))
+                    except Exception as ex:
+                        logger.warning("theme shortcut failed: %s", ex)
+                    return "break"
+                self.root.bind_all("<Control-Shift-T>", _open_theme_shortcut)
+                self.root.bind_all("<Control-Shift-t>", _open_theme_shortcut)
             else:
                 self._logo_label = None
         except Exception:
