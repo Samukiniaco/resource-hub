@@ -41,7 +41,14 @@ class ResourceCard(tk.Frame):
             tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
                      font=FONTS["small"]).grid(row=2, column=0, sticky="w", padx=14, pady=(0, 8))
 
-        # banner — se catalog tem URL válida usa ela, senão carrossel da internet (sem repetir)
+        # banner — altura/enquadramento vêm do tema (automático p/ todos)
+        from app.services.image_service import get_banner_settings as _banner_settings
+        try:
+            _bs = _banner_settings()
+            _bh = int(_bs.get("height", 200))
+        except Exception:
+            _bh = 200
+        self._banner_size = (960, _bh)
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
         self.banner_label.grid(row=3, column=0, sticky="ew", padx=0, pady=(0, 8))
@@ -61,7 +68,7 @@ class ResourceCard(tk.Frame):
             else:
                 # fallback procedural local
                 try:
-                    auto = get_auto_banner_tk(title, max_size=(960, 200))
+                    auto = get_auto_banner_tk(title, max_size=self._banner_size)
                     if auto:
                         self.banner_label.configure(image=auto, text="", compound="center")
                         self.banner_label.image = auto
@@ -123,6 +130,7 @@ class ResourceCard(tk.Frame):
 
     def _load_banner(self, url: str, fallback_title: str | None = None):
         title = fallback_title or self._title_for_banner
+        bsize = getattr(self, "_banner_size", (960, 200))
         def _cb(tk_img):
             def _apply():
                 try:
@@ -132,7 +140,7 @@ class ResourceCard(tk.Frame):
                         self.banner_label.configure(image=tk_img, text="", compound="center")
                         self.banner_label.image = tk_img
                     else:
-                        auto = get_auto_banner_tk(title, max_size=(960, 200))
+                        auto = get_auto_banner_tk(title, max_size=bsize)
                         if auto:
                             self.banner_label.configure(image=auto, text="", compound="center")
                             self.banner_label.image = auto
@@ -144,7 +152,7 @@ class ResourceCard(tk.Frame):
                 self.after(0, _apply)
             except tk.TclError:
                 pass
-        fetch_image_async(url, _cb, max_size=(960, 200))
+        fetch_image_async(url, _cb, max_size=bsize)
 
     def _on_open(self):
         if not self.link:

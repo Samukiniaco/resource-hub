@@ -64,8 +64,8 @@ def ensure_placeholder_image() -> Optional[Path]:
         return None
 
 
-def _cover_crop(img, max_size: tuple[int, int]):
-    """Redimensiona para preencher (cover) e corta o centro — banner 620x170 sem faixas."""
+def _cover_crop(img, max_size: tuple[int, int], focal: str = "center"):
+    """Preenche (cover) com ponto focal — top/center/bottom, sem distorcer."""
     tw, th = max_size
     w, h = img.size
     if w == 0 or h == 0:
@@ -74,10 +74,103 @@ def _cover_crop(img, max_size: tuple[int, int]):
     nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
     img = img.resize((nw, nh), Image.LANCZOS)
     left = (nw - tw) // 2
-    top = (nh - th) // 2
+    if focal == "top":
+        top = 0
+    elif focal == "bottom":
+        top = max(0, nh - th)
+    else:
+        top = (nh - th) // 2
     return img.crop((left, top, left + tw, top + th))
 
-def _load_image_from_path(path: Path, max_size: tuple[int, int]) -> Optional[object]:
+def _blur_fill(img, max_size: tuple[int, int], focal: str = "center"):
+    """Preenche sem cortar cabeças: fundo blurred + frente contida, sem distorcer."""
+    tw, th = max_size
+    w, h = img.size
+    if w == 0 or h == 0:
+        return img
+    try:
+        from PIL import ImageFilter
+        # fundo: cover + blur + escurece
+        scale_bg = max(tw / w, th / h)
+        bg = img.resize((max(1, int(w * scale_bg)), max(1, int(h * scale_bg))), Image.LANCZOS)
+        # crop centro p/ fundo
+        lw = (bg.size[0] - tw) // 2
+        th_ = (bg.size[1] - th) // 2
+        bg = bg.crop((lw, th_, lw + tw, th_ + th))
+        bg = bg.filter(ImageFilter.GaussianBlur(18))
+        # escurece 35% para texto/borda
+        if bg.mode != "RGB":
+            bg = bg.convert("RGB")
+        bg = bg.point(lambda p: int(p * 0.62))
+        # frente: contain sem cortar
+        scale_fg = min(tw / w, th / h)
+        nw, nh = max(1, int(w * scale_fg)), max(1, int(h * scale_fg))
+        fg = img.resize((nw, nh), Image.LANCZOS)
+        if fg.mode == "RGBA":
+            pass
+        elif fg.mode != "RGB":
+            fg = fg.convert("RGB")
+        # posição vertical pelo focal
+        if focal == "top":
+            y = 0
+        elif focal == "bottom":
+            y = max(0, th - nh)
+        else:
+            y = (th - nh) // 2
+        x = (tw - nw) // 2
+        if fg.mode == "RGBA":
+            bg.paste(fg, (x, y), fg)
+        else:
+            bg.paste(fg, (x, y))
+        return bg
+    except Exception:
+        return _cover_crop(img, max_size, focal)
+
+def get_banner_settings() -> dict:
+    """Lê data/theme.json (banner_fit/focal/height) — padrão sem corte de cabeça."""
+    try:
+        import json
+        from app.config import DATA_DIR
+        p = DATA_DIR / "theme.json"
+        if p.exists():
+            d = json.loads(p.read_text(encoding="utf-8"))
+            fit = str(d.get("banner_fit", "blur")).lower()
+            focal = str(d.get("banner_focal", "top")).lower()
+            try:
+                height = int(d.get("banner_height", 200))
+            except Exception:
+                height = 200
+            if fit not in ("blur", "cover", "contain"):
+                fit = "blur"
+            if focal not in ("top", "center", "bottom"):
+                focal = "top"
+            height = max(140, min(260, height))
+            return {"fit": fit, "focal": focal, "height": height}
+    except Exception:
+        pass
+    return {"fit": "blur", "focal": "top", "height": 200}
+
+def _fit_image(img, max_size: tuple[int, int], fit: str = "blur", focal: str = "top"):
+    if fit == "cover":
+        return _cover_crop(img, max_size, focal)
+    if fit == "contain":
+        # contém tudo com letterbox, sem cortar nada
+        tw, th = max_size
+        w, h = img.size
+        scale = min(tw / w, th / h) if w and h else 1
+        nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+        canvas = Image.new("RGB", (tw, th), (18, 18, 20))
+        fg = img.resize((nw, nh), Image.LANCZOS)
+        if fg.mode != "RGB":
+            try:
+                fg = fg.convert("RGB")
+            except Exception:
+                pass
+        canvas.paste(fg, ((tw - nw) // 2, (th - nh) // 2))
+        return canvas
+    return _blur_fill(img, max_size, focal)
+
+def _load_image_from_path(path: Path, max_size: tuple[int, int], fit: str | None = None, focal: str | None = None) -> Optional[object]:
     if not HAS_PIL:
         return None
     try:
@@ -85,7 +178,15 @@ def _load_image_from_path(path: Path, max_size: tuple[int, int]) -> Optional[obj
         img.load()
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGB")
-        img = _cover_crop(img, max_size)
+        if fit is None or focal is None:
+            s = get_banner_settings()
+            fit = fit or s["fit"]
+            focal = focal or s["focal"]
+        # thumbs pequenos (editor) usam cover simples; banners usam fit escolhido
+        if max_size[0] <= 260:
+            img = _cover_crop(img, max_size, focal or "center")
+        else:
+            img = _fit_image(img, max_size, fit, focal or "top")
         tk_img = ImageTk.PhotoImage(img)
         return tk_img
     except Exception as e:
@@ -157,7 +258,11 @@ def fetch_image_async(
                 img.load()
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
-                img = _cover_crop(img, max_size)
+                if max_size[0] <= 260:
+                    img = _cover_crop(img, max_size, "center")
+                else:
+                    s = get_banner_settings()
+                    img = _fit_image(img, max_size, s["fit"], s["focal"])
                 tk_img = ImageTk.PhotoImage(img)
                 _photo_cache[url] = tk_img
                 callback(tk_img)

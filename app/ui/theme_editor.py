@@ -106,6 +106,41 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         b.pack(side="left", padx=6)
         tk.Label(row, text=preview_colors.get(key, ""), bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Consolas", 7)).pack(side="left")
 
+    # Banners: tamanho + enquadramento + modo (automático p/ todos, sem distorcer)
+    banner_frame = ttk.LabelFrame(inner, text="Banners — tamanho e corte (vale p/ todos)", padding=8)
+    banner_frame.pack(fill="x", padx=12, pady=4)
+    tk.Label(banner_frame, text="Blur = sem cortar cabeças (fundo desfocado). Cover = preenche cortando. Contain = tudo visível com faixas.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
+    try:
+        from app.services.image_service import get_banner_settings as _get_bs
+        _bs0 = _get_bs()
+    except Exception:
+        _bs0 = {"fit": "blur", "focal": "top", "height": 200}
+    banner_fit_var = tk.StringVar(value=_bs0.get("fit", "blur"))
+    banner_focal_var = tk.StringVar(value=_bs0.get("focal", "top"))
+    banner_height_var = tk.IntVar(value=int(_bs0.get("height", 200)))
+    brow = tk.Frame(banner_frame, bg=dlg.cget("bg"))
+    brow.pack(fill="x", pady=4)
+    tk.Label(brow, text="Modo:", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Segoe UI", 8)).pack(side="left")
+    fit_cb = ttk.Combobox(brow, textvariable=banner_fit_var, values=["blur", "cover", "contain"], state="readonly", width=10, font=("Segoe UI", 8))
+    fit_cb.pack(side="left", padx=4)
+    tk.Label(brow, text="Foco:", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Segoe UI", 8)).pack(side="left", padx=(8, 0))
+    focal_cb = ttk.Combobox(brow, textvariable=banner_focal_var, values=["top", "center", "bottom"], state="readonly", width=10, font=("Segoe UI", 8))
+    focal_cb.pack(side="left", padx=4)
+    tk.Label(brow, text="Altura:", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Segoe UI", 8)).pack(side="left", padx=(8, 0))
+    height_scale = tk.Scale(brow, from_=140, to=260, orient="horizontal", variable=banner_height_var, bg=dlg.cget("bg"), fg=COLORS["text_secondary"], highlightthickness=0, length=140, font=("Segoe UI", 7))
+    height_scale.pack(side="left", padx=4)
+    height_lbl = tk.Label(brow, text=f"{banner_height_var.get()}px", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7), width=6)
+    height_lbl.pack(side="left")
+    def _upd_height_lbl(*a):
+        try:
+            height_lbl.configure(text=f"{banner_height_var.get()}px")
+        except Exception:
+            pass
+    try:
+        banner_height_var.trace_add("write", _upd_height_lbl)
+    except Exception:
+        pass
+
     # Cor a partir de imagem (sem header fantasma — header nunca aparecia no app)
     color_img_frame = ttk.LabelFrame(inner, text="Cor a partir de imagem", padding=8)
     color_img_frame.pack(fill="x", padx=12, pady=4)
@@ -269,21 +304,28 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                     messagebox.showinfo("Já existe", "Imagem já no carrossel.", parent=dlg)
             ttk.Button(row, text="＋ Adicionar", width=10, command=_add).pack(side="right", padx=4)
 
+    search_state = {"items": [], "page": 0, "per": 6}
+    def _render_page():
+        start = search_state["page"] * search_state["per"]
+        _render_results(search_state["items"][start:start + search_state["per"]])
+        total = max(1, (len(search_state["items"]) + search_state["per"] - 1) // search_state["per"])
+        page_lbl.configure(text=f"Página {search_state['page']+1}/{total} — {len(search_state['items'])} resultados")
+        prev_btn.configure(state="normal" if search_state["page"] > 0 else "disabled")
+        next_btn.configure(state="normal" if (search_state["page"]+1) * search_state["per"] < len(search_state["items"]) else "disabled")
+
     def _do_search():
         import threading
         q = carousel_search_var.get().strip() or "anime"
         for w in previews_frame.winfo_children():
             w.destroy()
-        loading_lbl = tk.Label(previews_frame, text=f"Buscando '{q}' em NekosAPI + Safebooru…", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7))
-        loading_lbl.pack(anchor="w")
+        tk.Label(previews_frame, text=f"Buscando '{q}' em NekosAPI + Safebooru (30)…", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7)).pack(anchor="w")
         search_btn.configure(state="disabled")
         def _work():
             try:
                 from app.services.banner_carousel import search_image_detailed
-                items = search_image_detailed(q, count=6)
-            except Exception as e:
+                items = search_image_detailed(q, count=30)
+            except Exception:
                 items = []
-                err = str(e)
             def _ui():
                 try:
                     search_btn.configure(state="normal")
@@ -293,8 +335,11 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                     for w in previews_frame.winfo_children():
                         w.destroy()
                     tk.Label(previews_frame, text="Nada encontrado — tente 'maid' ou cole URL manual abaixo.", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7), wraplength=440).pack(anchor="w")
+                    page_lbl.configure(text="0 resultados")
                     return
-                _render_results(items)
+                search_state["items"] = items
+                search_state["page"] = 0
+                _render_page()
             try:
                 dlg.after(0, _ui)
             except tk.TclError:
@@ -303,6 +348,12 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
 
     search_btn = ttk.Button(search_row, text="Buscar", width=8, command=_do_search)
     search_btn.pack(side="left", padx=4)
+    page_lbl = tk.Label(search_row, text="", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7))
+    page_lbl.pack(side="left", padx=4)
+    prev_btn = ttk.Button(search_row, text="◀", width=3, command=lambda: (search_state.__setitem__("page", max(0, search_state["page"]-1)), _render_page()))
+    prev_btn.pack(side="left")
+    next_btn = ttk.Button(search_row, text="▶", width=3, command=lambda: (search_state.__setitem__("page", search_state["page"]+1), _render_page()))
+    next_btn.pack(side="left", padx=2)
     def _clear_search():
         for w in previews_frame.winfo_children():
             w.destroy()
@@ -396,10 +447,27 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     btns = tk.Frame(dlg, bg=dlg.cget("bg"))
     btns.pack(fill="x", padx=12, pady=12)
     def _apply():
-        # persiste TODAS as cores do preview (não só EDITABLE_KEYS, senão fundo volta ao mesmo)
+        # persiste TODAS as cores do preview + banner settings
         from app.services.theme_service import DEFAULT_DARK as _DD, HEX_RE as _HEX
         full = {k: v for k, v in preview_colors.items() if k in _DD and isinstance(v, str) and _HEX.match(v.strip())}
         save_theme(selected_mode.get(), full)
+        try:
+            import json
+            from app.config import DATA_DIR as _DD2
+            _tp = _DD2 / "theme.json"
+            _cur = json.loads(_tp.read_text(encoding="utf-8")) if _tp.exists() else {}
+            _cur["banner_fit"] = banner_fit_var.get().strip()
+            _cur["banner_focal"] = banner_focal_var.get().strip()
+            _cur["banner_height"] = int(banner_height_var.get())
+            _tp.write_text(json.dumps(_cur, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except Exception:
+            pass
+        # limpa cache de banners para o novo tamanho/modo valer na hora
+        try:
+            from app.services import image_service as _is
+            _is._photo_cache.clear()
+        except Exception:
+            pass
         apply_theme(parent)
         try:
             # reconstrói tabs se possível
