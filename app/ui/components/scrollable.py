@@ -27,11 +27,12 @@ class ScrollableFrame(ttk.Frame):
         self.inner.bind("<Configure>", self._update_scrollregion)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
 
-        # mousewheel só quando está sobre o widget
-        self.inner.bind("<Enter>", self._bind_wheel)
-        self.inner.bind("<Leave>", self._unbind_wheel)
-        self.canvas.bind("<Enter>", self._bind_wheel)
-        self.canvas.bind("<Leave>", self._unbind_wheel)
+        # mousewheel quando está sobre o widget — outer evita flicker ao entrar nos cards
+        self.bind("<Enter>", self._bind_wheel)
+        self.bind("<Leave>", self._unbind_wheel)
+        # também garante quando o mouse entra direto no canvas/inner (sem passar pela borda)
+        self.canvas.bind("<Enter>", self._bind_wheel, add="+")
+        self.inner.bind("<Enter>", self._bind_wheel, add="+")
 
         # inicia no topo
         self.canvas.yview_moveto(0)
@@ -74,6 +75,9 @@ class ScrollableFrame(ttk.Frame):
             pass
 
     def _on_mousewheel(self, event):
+        # só rola se este frame está visível (aba ativa)
+        if not self.winfo_viewable():
+            return
         # só rola se houver conteúdo rolável
         first, last = self.canvas.yview()
         if float(first) <= 0 and float(last) >= 1:

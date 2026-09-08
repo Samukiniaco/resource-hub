@@ -1,4 +1,4 @@
-"""Tema local — presets anime light + persistência, import/export."""
+"""Tema local — presets anime light/dark + persistência, import/export."""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,6 @@ THEME_CUSTOM_HEADER = DATA_DIR / "header_bg.custom.png"
 
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
-# Cores base (dark) — espelho de styles.COLORS
 DEFAULT_DARK: Dict[str, str] = {
     "bg": "#121214",
     "bg_top": "#1a1a1d",
@@ -70,38 +69,59 @@ LIGHT: Dict[str, str] = {
     "status_err": "#dc2626",
 }
 
-# Anime light — paletas suaves inspiradas nos animes citados
+# Anime — paletas refinadas + dark variants (usuário pediu modo escuro para cada)
+def _dark_variant(light: Dict[str, str], accent: str, accent_hover: str, accent_press: str) -> Dict[str, str]:
+    base = dict(DEFAULT_DARK)
+    base.update({"accent": accent, "accent_hover": accent_hover, "accent_press": accent_press, "accent_subtle": "#1e2a3a"})
+    # mantém bg dark mas com leve tint do tema
+    return base
+
+# Light presets — cores mais fiéis e pastéis
+_KOBAYASHI = {**LIGHT, "accent": "#2a9d8f", "accent_hover": "#3ab09e", "accent_press": "#1f7a6e", "accent_subtle": "#dff5f0", "bg": "#fdf8f0", "bg_top": "#fffbf5", "border": "#f0e6d8"}
+_NICHIJOU  = {**LIGHT, "accent": "#f4b400", "accent_hover": "#ffca28", "accent_press": "#e6a200", "accent_subtle": "#fff8d6", "bg": "#fffef5", "bg_top": "#ffffff", "border": "#fde68a"}  # amarelo giz
+_AZUMANGA = {**LIGHT, "accent": "#e77a9a", "accent_hover": "#ee98b0", "accent_press": "#d65f82", "accent_subtle": "#fde8ef", "bg": "#fff7f9", "bg_top": "#ffffff", "border": "#fbcfe8"}  # sakura menos neon
+_K_ON     = {**LIGHT, "accent": "#c47a1a", "accent_hover": "#d98f2e", "accent_press": "#a8640f", "accent_subtle": "#fff3d6", "bg": "#fdf6ec", "bg_top": "#fffaf0", "border": "#fde68a"}  # chá/marrom
+_BOCCHI   = {**LIGHT, "accent": "#6b7cff", "accent_hover": "#8896ff", "accent_press": "#5566e0", "accent_subtle": "#ecefff", "bg": "#f8f7ff", "bg_top": "#ffffff", "border": "#ddd6fe"}  # roxo palco menos saturado
+
 PRESETS: Dict[str, Dict[str, str]] = {
     "dark": DEFAULT_DARK,
     "light": LIGHT,
-    "kobayashi": {  # Dragon Maid — verde suave + laranja Tohru
-        **LIGHT, "accent": "#2e7d6f", "accent_hover": "#3a9a87", "accent_press": "#25665b", "accent_subtle": "#e0f2ef",
-        "bg": "#fdf8f0", "bg_top": "#fffbf5", "border": "#f0e6d8",
-    },
-    "nichijou": {  # Nichijou — amarelo pastel + azul céu
-        **LIGHT, "accent": "#f59e0b", "accent_hover": "#fbbf24", "accent_press": "#d97706", "accent_subtle": "#fef3c7",
-        "bg": "#fffef5", "bg_top": "#ffffff", "border": "#fde68a",
-    },
-    "azumanga": {  # Azumanga — rosa sakura claro
-        **LIGHT, "accent": "#ec4899", "accent_hover": "#f472b6", "accent_press": "#db2777", "accent_subtle": "#fce7f3",
-        "bg": "#fff7f9", "bg_top": "#ffffff", "border": "#fbcfe8",
-    },
-    "k_on": {  # K-On — marrom chocolate + creme
-        **LIGHT, "accent": "#b45309", "accent_hover": "#d97706", "accent_press": "#92400e", "accent_subtle": "#fef3c7",
-        "bg": "#fdf6ec", "bg_top": "#fffaf0", "border": "#fde68a",
-    },
-    "bocchi": {  # Bocchi — roxo/azul escuro mas light
-        **LIGHT, "accent": "#7c3aed", "accent_hover": "#8b5cf6", "accent_press": "#6d28d9", "accent_subtle": "#ede9fe",
-        "bg": "#f8f7ff", "bg_top": "#ffffff", "border": "#ddd6fe",
-    },
-    "minecraft": {  # Minecraft — verde grama
-        **DEFAULT_DARK, "accent": "#3B8526", "accent_hover": "#4a9c2d", "accent_press": "#2f6a1e", "accent_subtle": "#1e2e1a",
-        "bg": "#1e221e", "bg_top": "#252a25", "border": "#3a3d2f",
-    },
+    "kobayashi": _KOBAYASHI,
+    "kobayashi_dark": _dark_variant(_KOBAYASHI, "#2a9d8f", "#3ab09e", "#1f7a6e"),
+    "nichijou": _NICHIJOU,
+    "nichijou_dark": _dark_variant(_NICHIJOU, "#f4b400", "#ffca28", "#e6a200"),
+    "azumanga": _AZUMANGA,
+    "azumanga_dark": _dark_variant(_AZUMANGA, "#e77a9a", "#ee98b0", "#d65f82"),
+    "k_on": _K_ON,
+    "k_on_dark": _dark_variant(_K_ON, "#c47a1a", "#d98f2e", "#a8640f"),
+    "bocchi": _BOCCHI,
+    "bocchi_dark": _dark_variant(_BOCCHI, "#6b7cff", "#8896ff", "#5566e0"),
+    "minecraft": {**DEFAULT_DARK, "accent": "#3B8526", "accent_hover": "#4a9c2d", "accent_press": "#2f6a1e", "accent_subtle": "#1e2e1a", "bg": "#1e221e", "bg_top": "#252a25", "border": "#3a3d2f"},
+    "minecraft_light": {**LIGHT, "accent": "#3B8526", "accent_hover": "#4a9c2d", "accent_press": "#2f6a1e", "accent_subtle": "#e8f5e3", "bg": "#f6fdf4", "bg_top": "#ffffff", "border": "#c5e0b8"},
 }
 
 def _is_hex(s: str) -> bool:
     return isinstance(s, str) and bool(HEX_RE.match(s.strip()))
+
+def extract_dominant_color(image_path: Path) -> str | None:
+    """Extrai cor dominante (região mais abundante) de uma imagem — para tema."""
+    try:
+        from PIL import Image
+        im = Image.open(image_path).convert("RGB")
+        # reduz para acelerar
+        im = im.resize((64, 64), Image.LANCZOS)
+        # quantiza para 8 cores e pega mais frequente
+        im = im.quantize(colors=8, method=Image.Quantize.MEDIANCUT)
+        palette = im.getpalette()[:24]  # 8*3
+        counts = im.getcolors(4096)
+        if not counts:
+            return None
+        counts.sort(key=lambda x: x[0], reverse=True)
+        idx = counts[0][1]
+        r, g, b = palette[idx*3:idx*3+3]
+        return f"#{r:02x}{g:02x}{b:02x}"
+    except Exception:
+        return None
 
 def validate_theme_dict(data: Any) -> Dict[str, Any]:
     if not isinstance(data, dict):
@@ -119,7 +139,6 @@ def validate_theme_dict(data: Any) -> Dict[str, Any]:
         if k in DEFAULT_DARK and isinstance(v, str) and _is_hex(v.strip()):
             clean[k] = v.strip().lower()
     out["colors"] = clean
-    # images: opcional, só guarda flag se existe custom header
     if THEME_CUSTOM_HEADER.exists():
         out["has_custom_header"] = True
     return out
@@ -152,7 +171,6 @@ def get_colors() -> Dict[str, str]:
     info = load_theme()
     mode = info.get("mode", "dark")
     base = PRESETS.get(mode, DEFAULT_DARK) if mode in PRESETS else DEFAULT_DARK
-    # custom overrides
     colors = dict(base)
     for k, v in info.get("colors", {}).items():
         if _is_hex(v):
@@ -161,7 +179,6 @@ def get_colors() -> Dict[str, str]:
 
 def export_theme_file(path: Path) -> None:
     info = load_theme()
-    # inclui cores atuais resolvidas
     colors = get_colors()
     payload = {
         "format": "rhtheme",
@@ -174,12 +191,10 @@ def export_theme_file(path: Path) -> None:
 
 def import_theme_file(path: Path) -> None:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    # suporta rhtheme e theme.json direto
     colors = raw.get("colors") if "colors" in raw else raw
     if not isinstance(colors, dict):
         raise ValueError("Arquivo inválido: sem 'colors'")
     mode = raw.get("mode", "custom")
-    # valida
     clean = {k: v for k, v in colors.items() if k in DEFAULT_DARK and _is_hex(str(v))}
     if not clean:
         raise ValueError("Nenhuma cor válida encontrada")

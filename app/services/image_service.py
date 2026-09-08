@@ -172,14 +172,23 @@ def fetch_image_sync(url: str, max_size=(320, 160)) -> Optional[object]:
     return get_placeholder_tk(max_size)
 
 
-# --- Banners automáticos (gera via Pillow quando vazio/inválido) ---
+# --- Banners automáticos ---
 def _banner_cache_key(title: str, max_size: tuple[int, int]) -> str:
     import hashlib
     h = hashlib.sha256(title.encode("utf-8")).hexdigest()[:8]
     return f"__auto_banner__{h}_{max_size[0]}x{max_size[1]}"
 
+def get_anime_image_url(title: str, w: int = 620, h: int = 170) -> str:
+    """URL determinística puxada da internet — sem API key, cacheável."""
+    import hashlib
+    # hash estável por título → seed para picsum (foto real) + waifu fallback
+    seed = hashlib.sha256(title.encode("utf-8")).hexdigest()[:10]
+    # picsum.photos é confiável, 200ms, sem CORS, sempre retorna imagem
+    # para variar: usa seed, garante mesma imagem por título
+    return f"https://picsum.photos/seed/{seed}/{w}/{h}"
+
 def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Optional[object]:
-    """Gera banner procedural bonito (sem precisar baixar) — anime-light / minecraft."""
+    """Gera banner procedural bonito (fallback se rede falhar) — anime-light / minecraft."""
     if not HAS_PIL:
         return get_placeholder_tk(max_size)
     key = _banner_cache_key(title, max_size)
@@ -188,7 +197,6 @@ def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Op
     try:
         from app.services.theme_service import get_colors
         colors = get_colors()
-        # usa cores do tema atual para coesão
         bg = colors.get("bg_card", "#1e1e22")
         accent = colors.get("accent", "#2f80ed")
         text_col = colors.get("text_primary", "#f2f2f3")
@@ -199,23 +207,17 @@ def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Op
             return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
         w, h = max_size
-        # degrade vertical sutil
         img = Image.new("RGB", (w, h), _hex_to_rgb(bg))
         draw = __import__("PIL.ImageDraw", fromlist=["ImageDraw"]).ImageDraw.Draw(img)
-        # faixa accent no topo
         try:
             ar, ag, ab = _hex_to_rgb(accent)
             for y in range(4):
-                a = int(180 - y*30)
                 draw.line((0, y, w, y), fill=(ar, ag, ab))
         except Exception:
             pass
-        # nome + ID se houver " — " ou ":"
         short = title[:42] + ("…" if len(title) > 42 else "")
-        # tenta fonte
         try:
             from PIL import ImageFont
-            # Segoe UI se existir, senão default
             try:
                 font_title = ImageFont.truetype("segoeui.ttf", 16)
                 font_sub = ImageFont.truetype("segoeui.ttf", 9)
@@ -226,18 +228,12 @@ def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Op
             font_title = None
             font_sub = None
 
-        # centraliza texto
-        tw = draw.textlength(short, font=font_title) if font_title and hasattr(draw, "textlength") else len(short)*8
-        th = 16
-        # bloco central com borda sutil
         pad = 12
         box_y0 = h//2 - 22
         box_y1 = h//2 + 22
         draw.rounded_rectangle((pad, box_y0, w-pad, box_y1), radius=10, fill=(35,35,39) if bg.startswith("#1") else (245,245,247), outline=_hex_to_rgb(colors.get("border", "#2a2a2e")), width=1)
         draw.text((w/2, h/2 - 6), short, fill=_hex_to_rgb(text_col), font=font_title, anchor="mm")
         draw.text((w/2, h/2 + 12), "Resource Hub  •  banner automático", fill=_hex_to_rgb(muted), font=font_sub, anchor="mm")
-
-        # ícone sutil canto
         draw.ellipse((w-28, h-28, w-12, h-12), fill=_hex_to_rgb(accent), outline=None)
         draw.text((w-20, h-20), "⛏", fill=(255,255,255), font=font_sub, anchor="mm")
 

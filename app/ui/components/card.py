@@ -37,7 +37,7 @@ class ResourceCard(tk.Frame):
             tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
                      font=FONTS["small"]).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
 
-        # banner — automático se vazio/inválido (sem precisar baixar)
+        # banner — tenta rede real, fallback procedural
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
         self.banner_label.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
@@ -45,16 +45,23 @@ class ResourceCard(tk.Frame):
             self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
         else:
-            # gera banner procedural (anime-light/minecraft) — sem download
+            # puxa da internet (picsum seed por título) — real, não só procedural
             try:
-                auto = get_auto_banner_tk(title, max_size=(620, 170))
-                if auto:
-                    self.banner_label.configure(image=auto, text="", compound="center")
-                    self.banner_label.image = auto
-                else:
-                    self.banner_label.grid_remove()
+                from app.services.image_service import get_anime_image_url
+                auto_url = get_anime_image_url(title, 620, 170)
+                self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
+                self._load_banner(auto_url, fallback_title=title)
             except Exception:
-                self.banner_label.grid_remove()
+                # fallback procedural imediato
+                try:
+                    auto = get_auto_banner_tk(title, max_size=(620, 170))
+                    if auto:
+                        self.banner_label.configure(image=auto, text="", compound="center")
+                        self.banner_label.image = auto
+                    else:
+                        self.banner_label.grid_remove()
+                except Exception:
+                    self.banner_label.grid_remove()
 
         # warning
         if warning:
@@ -107,16 +114,18 @@ class ResourceCard(tk.Frame):
         self.configure(bg=COLORS["border"])
         self.card.configure(bg=COLORS["bg_card"])
 
-    def _load_banner(self, url: str):
+    def _load_banner(self, url: str, fallback_title: str | None = None):
+        title = fallback_title or self._title_for_banner
         def _cb(tk_img):
             def _apply():
                 try:
                     if tk_img is not None:
-                        # verifica se é placeholder genérico (se quiser, troca por auto)
+                        # se for placeholder genérico e tínhamos fallback, tenta auto procedural como fallback melhor
+                        # Mas picsum sempre retorna imagem, então ok
                         self.banner_label.configure(image=tk_img, text="", compound="center")
                         self.banner_label.image = tk_img
                     else:
-                        auto = get_auto_banner_tk(self._title_for_banner, max_size=(620, 170))
+                        auto = get_auto_banner_tk(title, max_size=(620, 170))
                         if auto:
                             self.banner_label.configure(image=auto, text="", compound="center")
                             self.banner_label.image = auto

@@ -18,12 +18,18 @@ EDITABLE_KEYS = ["accent", "bg", "bg_top", "bg_card", "border", "text_primary", 
 PRESET_LABELS = {
     "dark": "Dark (padrão)",
     "light": "Light",
-    "kobayashi": "Kobayashi Dragon Maid 🌿",
-    "nichijou": "Nichijou ☀️",
-    "azumanga": "Azumanga Daioh 🌸",
-    "k_on": "K-On! 🎸",
-    "bocchi": "Bocchi the Rock! 🎧",
-    "minecraft": "Minecraft ⛏️",
+    "kobayashi": "Kobayashi 🌿 Light",
+    "kobayashi_dark": "Kobayashi 🌿 Dark",
+    "nichijou": "Nichijou ☀️ Light",
+    "nichijou_dark": "Nichijou ☀️ Dark",
+    "azumanga": "Azumanga 🌸 Light",
+    "azumanga_dark": "Azumanga 🌸 Dark",
+    "k_on": "K-On! 🎸 Light",
+    "k_on_dark": "K-On! 🎸 Dark",
+    "bocchi": "Bocchi 🎧 Light",
+    "bocchi_dark": "Bocchi 🎧 Dark",
+    "minecraft": "Minecraft ⛏️ Dark",
+    "minecraft_light": "Minecraft ⛏️ Light",
 }
 
 def open_theme_editor(parent: tk.Tk, on_apply=None):
@@ -104,12 +110,21 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
             from PIL import Image
             im = Image.open(p)
             im.thumbnail((1020, 88), Image.LANCZOS)
-            # salva como custom
             THEME_CUSTOM_HEADER.parent.mkdir(parents=True, exist_ok=True)
             im.save(THEME_CUSTOM_HEADER, format="PNG")
+            # extrai cor dominante para sugerir accent
+            try:
+                from app.services.theme_service import extract_dominant_color
+                dom = extract_dominant_color(THEME_CUSTOM_HEADER)
+                if dom:
+                    preview_colors["accent"] = dom
+                    _refresh_preview()
+                    messagebox.showinfo("Header", f"Header salvo em {THEME_CUSTOM_HEADER}\nCor dominante {dom} aplicada ao accent (preview). Clique Aplicar para salvar.", parent=dlg)
+                    return
+            except Exception:
+                pass
             messagebox.showinfo("Header", f"Header salvo em {THEME_CUSTOM_HEADER}\nReinicie o app para ver (ou Aplicar tema).", parent=dlg)
         except Exception as e:
-            # fallback cópia bruta
             try:
                 import shutil
                 shutil.copy(p, THEME_CUSTOM_HEADER)
@@ -124,6 +139,25 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         except Exception as e:
             messagebox.showerror("Erro", str(e), parent=dlg)
     ttk.Button(img_row, text="Remover", command=_clear_header).pack(side="left", padx=6)
+    def _use_dominant():
+        if not THEME_CUSTOM_HEADER.exists():
+            messagebox.showwarning("Sem imagem", "Escolha um header primeiro.", parent=dlg)
+            return
+        try:
+            from app.services.theme_service import extract_dominant_color
+            dom = extract_dominant_color(THEME_CUSTOM_HEADER)
+            if dom:
+                preview_colors["accent"] = dom
+                # calcula hover/press levemente mais claro/escuro
+                _refresh_preview()
+                selected_mode.set("custom")
+                cb.set("custom — personalizado")
+                messagebox.showinfo("Cor", f"Cor dominante {dom} aplicada ao accent.", parent=dlg)
+            else:
+                messagebox.showwarning("Falha", "Não foi possível extrair cor.", parent=dlg)
+        except Exception as e:
+            messagebox.showerror("Erro", str(e), parent=dlg)
+    ttk.Button(img_row, text="Usar cor da imagem", command=_use_dominant).pack(side="left", padx=6)
     if THEME_CUSTOM_HEADER.exists():
         tk.Label(img_frame, text=f"✔ custom header existe ({THEME_CUSTOM_HEADER.stat().st_size} bytes)", bg=dlg.cget("bg"), fg=COLORS["success"], font=("Segoe UI", 7)).pack(anchor="w")
 
