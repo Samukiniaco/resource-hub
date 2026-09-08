@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "app": {
-    "catalog_version": "1.1.0",
-    "changelog": "1.1.0 -- Algumas correções, ferramentas novas e mais versões:\n\n- Seletor de Java (Patches), requer Python\n- Atualização dos assets\n- Atualização das bibliotecas\n- Adicionado: 1.7.10 (Forge e Vanilla), 1.12.2 (Forge e Vanilla), 1.20.1 (Forge), c0.30_01c (Vanilla *bugado*), rd-132211 (primeira versão)\n- Pack de Javas funcional com o Seletor de Java.\n- Patch de correção do Modpack da versão anterior, no caso, um listador e novas bibliotecas e assets já testados, em caso de erro, possivelmente há algo de errado com a rede, computador ou ao baixar/passar as bibliotecas e assets.\n- Jar de versões Fabric faltando (corrigido!)\n\nIrei tentar colocar uma página apenas para essas changelogs no app principal, pra mostrar o histórico a partir desta, vou tentar recuperar o changelog das anteriores.\n\nMe ajude a te ajudar, evite solicitar muita coisa, mas o site do launcher sempre terá um formulário para desbloquear seu launcher, para pedidos (como modpacks e outros) e feedback do ResourceHub, após o lançamento da v1.1.0, o site será atualizado para implementação do Resource Hub, que antes não era mencionado por questões de segurança.\n\ns4MuK1N14c0 - Evite compartilhar informações."
+    "catalog_version": "1.1.1",
+    "changelog": "1.1.1 -- Correção da 1.1.0\n\n- Pack de Javas adicionado\n\ns4MuK1N14c0 - Evite compartilhar informações."
   },
   "minecraft": {
     "versions": [
@@ -171,6 +171,12 @@
       "name": "Java 8",
       "description": "Necessário para versões antigas como 1.8.9.",
       "link": "https://adoptium.net/temurin/releases/?version=8"
+    },
+    {
+      "version": "8-26",
+      "name": "Pack Java",
+      "description": "Um pack com as versões do Java: 8, 17, 21 e 26",
+      "link": "https://drive.google.com/drive/folders/1Li6gJ_cpKiNS1p2Yc9fJFOyLbW3vAYS0?usp=drive_link"
     }
   ],
   "launcher": {
