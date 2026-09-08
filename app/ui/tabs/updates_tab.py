@@ -13,6 +13,84 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+def _build_history_row(hist_inner, e, total, status_var, sc, inner):
+    """Uma linha do histórico — escopo próprio, sem closure vazando."""
+    row = tk.Frame(hist_inner, bg=COLORS["bg"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+    row.pack(fill="x", pady=6)
+    r = tk.Frame(row, bg=COLORS["bg"])
+    r.pack(fill="x", padx=12, pady=10)
+    head = tk.Frame(r, bg=COLORS["bg"])
+    head.pack(fill="x")
+    tk.Label(head, text=f"v{e.catalog_version}", bg=COLORS["bg"], fg=COLORS["accent"], font=FONTS["small_bold"]).pack(side="left")
+    tk.Label(head, text=f"  ·  {e.date}  ·  {e.short_sha}  ·  {e.author or '—'}", bg=COLORS["bg"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(side="left")
+    if e.message and e.message.strip().lower() not in (e.catalog_version.lower(),):
+        tk.Label(r, text=e.message, bg=COLORS["bg"], fg=COLORS["text_secondary"], font=FONTS["small"], wraplength=560, justify="left", anchor="w").pack(anchor="w", pady=(2, 4))
+    preview = e.changelog.strip().split("\n")
+    preview_text = "\n".join(preview[:3])
+    if len(preview) > 3:
+        preview_text += " …"
+    txt = tk.Text(r, wrap="word", height=3, bg=COLORS["bg_card"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=6, font=FONTS["small"], highlightthickness=1, highlightbackground=COLORS["border"])
+    txt.insert("1.0", preview_text)
+    txt.configure(state="disabled")
+    txt.pack(fill="x", pady=(2, 8))
+
+    # botões primeiro (existem antes do toggle referenciá-los)
+    btn_row2 = tk.Frame(r, bg=COLORS["bg"])
+    btn_row2.pack(fill="x")
+    state = {"open": False, "full": None}
+    exp_btn = ttk.Button(btn_row2, text="Ver changelog completo", style="Ghost.TButton")
+    exp_btn.pack(side="left")
+
+    def _toggle():
+        if not state["open"]:
+            lines = e.changelog.count("\n") + 1
+            h = max(6, min(30, lines + 1))
+            full = tk.Text(r, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=8, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"], height=h)
+            full.insert("1.0", e.changelog)
+            full.configure(state="disabled")
+            full.pack(fill="x", pady=(0, 8), before=btn_row2)
+            state["full"] = full
+            exp_btn.configure(text="Recolher")
+            state["open"] = True
+        else:
+            if state["full"] is not None:
+                try:
+                    state["full"].destroy()
+                except tk.TclError:
+                    pass
+                state["full"] = None
+            exp_btn.configure(text="Ver changelog completo")
+            state["open"] = False
+        try:
+            sc._update_scrollregion()
+        except Exception:
+            pass
+
+    exp_btn.configure(command=_toggle)
+
+    def _copy_raw():
+        ok = copy_to_clipboard(inner.winfo_toplevel(), e.raw_url)
+        status_var.set("Raw copiado!" if ok else "Falha ao copiar")
+        inner.after(1500, lambda: status_var.set(f"{total} versões"))
+    def _open_raw():
+        open_url(e.raw_url)
+    def _download():
+        try:
+            import urllib.request, json as _js
+            data = _js.loads(urllib.request.urlopen(urllib.request.Request(e.raw_url, headers={"User-Agent": "ResourceHub/1.0"}), timeout=10).read().decode("utf-8"))
+            p = filedialog.asksaveasfilename(parent=inner, title="Salvar catálogo antigo", defaultextension=".json", initialfile=f"catalog-{e.catalog_version}-{e.short_sha}.json", filetypes=[("JSON", "*.json")])
+            if p:
+                P = __import__("pathlib").Path
+                P(p).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                messagebox.showinfo("Baixado", f"Salvo em {p}", parent=inner)
+        except Exception as ex:
+            messagebox.showerror("Erro", str(ex), parent=inner)
+
+    ttk.Button(btn_row2, text="Copiar Raw", style="Secondary.TButton", command=_copy_raw).pack(side="left", padx=4)
+    ttk.Button(btn_row2, text="Abrir Raw", style="Secondary.TButton", command=_open_raw).pack(side="left", padx=4)
+    ttk.Button(btn_row2, text="Baixar JSON", style="Secondary.TButton", command=_download).pack(side="left", padx=4)
+
+
 def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Frame:
     frame = ttk.Frame(notebook, style="TFrame", padding=0)
     sc = ScrollableFrame(frame)
@@ -93,85 +171,8 @@ def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Fr
                 status_var.set("Offline")
                 return
             status_var.set(f"{len(entries)} versões")
-            for e in entries:
-                row = tk.Frame(hist_inner, bg=COLORS["bg"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
-                row.pack(fill="x", pady=6)
-                r = tk.Frame(row, bg=COLORS["bg"])
-                r.pack(fill="x", padx=12, pady=10)
-                # linha 1: versão + data + sha
-                head = tk.Frame(r, bg=COLORS["bg"])
-                head.pack(fill="x")
-                tk.Label(head, text=f"v{e.catalog_version}", bg=COLORS["bg"], fg=COLORS["accent"], font=FONTS["small_bold"]).pack(side="left")
-                tk.Label(head, text=f"  ·  {e.date}  ·  {e.short_sha}  ·  {e.author or '—'}", bg=COLORS["bg"], fg=COLORS["text_muted"], font=FONTS["small"]).pack(side="left")
-                # commit message
-                if e.message and e.message.strip().lower() not in (e.catalog_version.lower(),):
-                    tk.Label(r, text=e.message, bg=COLORS["bg"], fg=COLORS["text_secondary"], font=FONTS["small"], wraplength=560, justify="left", anchor="w").pack(anchor="w", pady=(2, 4))
-                # changelog preview (primeiras 2 linhas)
-                preview = e.changelog.strip().split("\n")
-                preview_text = "\n".join(preview[:3])
-                if len(preview) > 3:
-                    preview_text += " …"
-                txt = tk.Text(r, wrap="word", height=3, bg=COLORS["bg_card"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=6, font=FONTS["small"], highlightthickness=1, highlightbackground=COLORS["border"])
-                txt.insert("1.0", preview_text)
-                txt.configure(state="disabled")
-                txt.pack(fill="x", pady=(2, 8))
-
-                # expand para changelog completo — logo abaixo do clicado (fix closure r+entry)
-                expanded = {"open": False}
-                full_txt = None
-                # captura r e entry por default arg para não usar último do loop
-                def _toggle(btn=None, entry=e, container=r):
-                    nonlocal full_txt
-                    if not expanded["open"]:
-                        lines = entry.changelog.count("\n") + 1
-                        h = max(6, min(30, lines + 1))
-                        full_txt = tk.Text(container, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=8, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"], height=h)
-                        full_txt.insert("1.0", entry.changelog)
-                        full_txt.configure(state="disabled")
-                        full_txt.pack(fill="x", pady=(8, 0), before=btn_row2)  # antes dos botões, logo abaixo do preview
-                        if btn:
-                            btn.configure(text="Recolher")
-                        expanded["open"] = True
-                    else:
-                        if full_txt:
-                            full_txt.destroy()
-                            full_txt = None
-                        if btn:
-                            btn.configure(text="Ver changelog completo")
-                        expanded["open"] = False
-                    try:
-                        sc._update_scrollregion()
-                    except Exception:
-                        pass
-                btn_row2 = tk.Frame(r, bg=COLORS["bg"])
-                btn_row2.pack(fill="x")
-                exp_btn = ttk.Button(btn_row2, text="Ver changelog completo", style="Ghost.TButton")
-                exp_btn.configure(command=lambda b=exp_btn, entry=e, cont=r: _toggle(b, entry, cont))
-                exp_btn.pack(side="left")
-
-                def _copy_raw(ev=None, url=e.raw_url):
-                    ok = copy_to_clipboard(inner.winfo_toplevel(), url)
-                    status_var.set("Raw copiado!" if ok else "Falha ao copiar")
-                    inner.after(1500, lambda: status_var.set(f"{len(entries)} versões"))
-                def _open_raw(ev=None, url=e.raw_url):
-                    open_url(url)
-                def _download(ev=None, entry=e):
-                    # baixa catalog antigo
-                    try:
-                        # fetch raw já temos catalog em entry.catalog, mas para garantir pega raw_url
-                        import urllib.request, json as _js
-                        data = _js.loads(urllib.request.urlopen(urllib.request.Request(entry.raw_url, headers={"User-Agent":"ResourceHub/1.0"}), timeout=10).read().decode("utf-8"))
-                        p = filedialog.asksaveasfilename(parent=inner, title="Salvar catálogo antigo", defaultextension=".json", initialfile=f"catalog-{entry.catalog_version}-{entry.short_sha}.json", filetypes=[("JSON","*.json")])
-                        if p:
-                            Path = __import__("pathlib").Path
-                            Path(p).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-                            messagebox.showinfo("Baixado", f"Salvo em {p}", parent=inner)
-                    except Exception as ex:
-                        messagebox.showerror("Erro", str(ex), parent=inner)
-
-                ttk.Button(btn_row2, text="Copiar Raw", style="Secondary.TButton", command=_copy_raw).pack(side="left", padx=4)
-                ttk.Button(btn_row2, text="Abrir Raw", style="Secondary.TButton", command=_open_raw).pack(side="left", padx=4)
-                ttk.Button(btn_row2, text="Baixar JSON", style="Secondary.TButton", command=_download).pack(side="left", padx=4)
+            for entry in entries:
+                _build_history_row(hist_inner, entry, len(entries), status_var, sc, inner)
 
             # botão abrir todos no github
             ttk.Button(hist_inner, text="Ver todos os commits no GitHub", style="Ghost.TButton", command=lambda: open_url("https://github.com/Samukiniaco/resource-hub/commits/master/data/catalog.json")).pack(anchor="w", pady=(8, 0))

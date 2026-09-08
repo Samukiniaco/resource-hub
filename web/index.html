@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resource Hub</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">⬢</span> Resource Hub <small>· recursos do launcher</small></div>
+  <div class="actions">
+    <button id="btn-refresh" class="btn secondary">Atualizar catálogo</button>
+    <button id="btn-url" class="btn ghost">Abrir URL</button>
+  </div>
+</header>
+<div class="status"><span id="dot">●</span> <span id="status-text">Carregando…</span></div>
+<nav class="tabs">
+  <button data-tab="minecraft" class="active">Minecraft</button>
+  <button data-tab="libs">Bibliotecas</button>
+  <button data-tab="java">Java</button>
+  <button data-tab="other">Outros / Patches</button>
+  <button data-tab="updates">Atualizações</button>
+</nav>
+<main>
+  <section id="tab-minecraft" class="tab active">
+    <div class="toolbar">
+      <input id="mc-search" placeholder="🔍 Buscar por nome ou descrição…">
+      <label>ID: <select id="mc-id"><option>Todos</option></select></label>
+      <label>Ordem: <select id="mc-sort">
+        <option>Catálogo</option><option>A-Z (nome)</option><option>Z-A (nome)</option>
+        <option>Versão ↓</option><option>Versão ↑</option>
+      </select></label>
+    </div>
+    <div id="mc-list" class="cards"></div>
+  </section>
+  <section id="tab-libs" class="tab"><div id="libs-list" class="cards"></div></section>
+  <section id="tab-java" class="tab"><div id="java-list" class="cards"></div></section>
+  <section id="tab-other" class="tab"><div id="other-list" class="cards"></div></section>
+  <section id="tab-updates" class="tab">
+    <div class="hero"><h2>Resource Hub</h2><p>Atualizações · Sobre</p>
+      <p class="muted">O catálogo remoto é a única fonte da verdade. Nunca baixa/executa — só abre links.</p>
+      <p>Versão: <b id="cat-version">—</b> · <span id="cat-stats"></span></p>
+      <pre id="changelog"></pre>
+      <p class="mono small"><a id="cat-url" href="#" target="_blank" rel="noopener"></a></p>
+    </div>
+    <div class="hero"><h3>📜 Histórico</h3><p class="muted">Puxado de github.com/Samukiniaco/resource-hub/commits — clique para expandir.</p>
+      <div id="history"></div>
+    </div>
+  </section>
+</main>
+<footer class="muted">Launcher externo não é modificado. · <a href="https://github.com/Samukiniaco/resource-hub" target="_blank" rel="noopener">GitHub</a></footer>
+<script src="app.js"></script>
+</body>
+</html>

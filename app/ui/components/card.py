@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 from app.ui.styles import COLORS, FONTS
 from app.utils.browser import open_url, is_valid_http_url
 from app.utils.clipboard import copy_to_clipboard
-from app.services.image_service import fetch_image_async, get_auto_banner_tk, get_anime_image_url
+from app.services.image_service import fetch_image_async, get_auto_banner_tk
 from app.services.banner_carousel import get_next_banner_url
 from app.utils.logger import get_logger
 

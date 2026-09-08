@@ -178,15 +178,6 @@ def _banner_cache_key(title: str, max_size: tuple[int, int]) -> str:
     h = hashlib.sha256(title.encode("utf-8")).hexdigest()[:8]
     return f"__auto_banner__{h}_{max_size[0]}x{max_size[1]}"
 
-def get_anime_image_url(title: str, w: int = 620, h: int = 170) -> str:
-    """URL determinística puxada da internet — sem API key, cacheável."""
-    import hashlib
-    # hash estável por título → seed para picsum (foto real) + waifu fallback
-    seed = hashlib.sha256(title.encode("utf-8")).hexdigest()[:10]
-    # picsum.photos é confiável, 200ms, sem CORS, sempre retorna imagem
-    # para variar: usa seed, garante mesma imagem por título
-    return f"https://picsum.photos/seed/{seed}/{w}/{h}"
-
 def get_auto_banner_tk(title: str, max_size: tuple[int, int] = (620, 170)) -> Optional[object]:
     """Gera banner procedural bonito (fallback se rede falhar) — anime-light / minecraft."""
     if not HAS_PIL:
