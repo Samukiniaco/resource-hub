@@ -15,5 +15,6 @@ data/catalog_url.txt
 data/theme.json
 data/header_bg.custom.png
 data/history_cache.json
+data/banner_carousel.json
 # assets gerados são versionados (icon/placeholder/empty/header)
 .DS_Store

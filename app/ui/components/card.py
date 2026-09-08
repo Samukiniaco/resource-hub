@@ -5,7 +5,8 @@ from tkinter import ttk, messagebox
 from app.ui.styles import COLORS, FONTS
 from app.utils.browser import open_url, is_valid_http_url
 from app.utils.clipboard import copy_to_clipboard
-from app.services.image_service import fetch_image_async, get_auto_banner_tk
+from app.services.image_service import fetch_image_async, get_auto_banner_tk, get_anime_image_url
+from app.services.banner_carousel import get_next_banner_url
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -37,7 +38,7 @@ class ResourceCard(tk.Frame):
             tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
                      font=FONTS["small"]).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
 
-        # banner — só mostra se catalog tem URL válida; senão gera procedural local (sem picsum bizarro)
+        # banner — se catalog tem URL válida usa ela, senão carrossel da internet (sem repetir)
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
         self.banner_label.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
@@ -45,16 +46,26 @@ class ResourceCard(tk.Frame):
             self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
         else:
-            # sem banner no catálogo → banner procedural temático (sem internet, sem foto aleatória)
+            # carrossel (picsum/unsplash) — puxa da internet, random sem repetir seguida
+            carousel_url = None
             try:
-                auto = get_auto_banner_tk(title, max_size=(620, 170))
-                if auto:
-                    self.banner_label.configure(image=auto, text="", compound="center")
-                    self.banner_label.image = auto
-                else:
-                    self.banner_label.grid_remove()
+                carousel_url = get_next_banner_url()
             except Exception:
-                self.banner_label.grid_remove()
+                carousel_url = None
+            if carousel_url:
+                self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
+                self._load_banner(carousel_url, fallback_title=title)
+            else:
+                # fallback procedural local
+                try:
+                    auto = get_auto_banner_tk(title, max_size=(620, 170))
+                    if auto:
+                        self.banner_label.configure(image=auto, text="", compound="center")
+                        self.banner_label.image = auto
+                    else:
+                        self.banner_label.grid_remove()
+                except Exception:
+                    self.banner_label.grid_remove()
 
         # warning
         if warning:

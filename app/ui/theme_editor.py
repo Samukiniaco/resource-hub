@@ -40,14 +40,22 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     dlg.geometry("520x640")
     dlg.minsize(480, 560)
     dlg.configure(bg=COLORS["bg"])
+    dlg.geometry("560x700")
 
     # estado
     current = load_theme()
     selected_mode = tk.StringVar(value=current.get("mode", "dark"))
-    # preview colors (não salvo até Aplicar)
     preview_colors = dict(get_colors())
 
-    header = tk.Frame(dlg, bg=COLORS["bg_card"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+    # scroll para caber carrossel + tudo
+    from app.ui.components.scrollable import ScrollableFrame
+    outer = ttk.Frame(dlg)
+    outer.pack(fill="both", expand=True)
+    sc = ScrollableFrame(outer)
+    sc.pack(fill="both", expand=True, padx=1, pady=1)
+    inner = sc.inner
+
+    header = tk.Frame(inner, bg=COLORS["bg_card"], highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
     header.pack(fill="x", padx=12, pady=12)
     h = tk.Frame(header, bg=COLORS["bg_card"])
     h.pack(fill="x", padx=14, pady=10)
@@ -55,7 +63,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     tk.Label(h, text="Escondido — 7 cliques no logo. Mude cores, light/dark e imagens. Exporte .rhtheme para compartilhar.", bg=COLORS["bg_card"], fg=COLORS["text_muted"], font=("Segoe UI", 8), wraplength=460, justify="left").pack(anchor="w", pady=(4, 0))
 
     # Presets
-    preset_frame = ttk.LabelFrame(dlg, text="Presets (anime light + dark)", padding=8)
+    preset_frame = ttk.LabelFrame(inner, text="Presets (anime light + dark)", padding=8)
     preset_frame.pack(fill="x", padx=12, pady=(0, 8))
     cb = ttk.Combobox(preset_frame, values=[f"{k} — {PRESET_LABELS.get(k,k)}" for k in PRESETS.keys()], state="readonly", width=40)
     # seleciona atual
@@ -69,7 +77,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     info.pack(anchor="w", pady=(6, 0))
 
     # Cores editáveis
-    colors_frame = ttk.LabelFrame(dlg, text="Cores (clique para escolher)", padding=8)
+    colors_frame = ttk.LabelFrame(inner, text="Cores (clique para escolher)", padding=8)
     colors_frame.pack(fill="x", padx=12, pady=4)
     btns = {}
     def _refresh_preview():
@@ -97,7 +105,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         tk.Label(row, text=preview_colors.get(key, ""), bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Consolas", 7)).pack(side="left")
 
     # Imagens
-    img_frame = ttk.LabelFrame(dlg, text="Imagens (opcional)", padding=8)
+    img_frame = ttk.LabelFrame(inner, text="Imagens (opcional)", padding=8)
     img_frame.pack(fill="x", padx=12, pady=4)
     tk.Label(img_frame, text="Header custom: data/header_bg.custom.png — use PNG/JPG 1020×88. Vazio = cor sólida.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
     img_row = tk.Frame(img_frame, bg=dlg.cget("bg"))
@@ -161,8 +169,156 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     if THEME_CUSTOM_HEADER.exists():
         tk.Label(img_frame, text=f"✔ custom header existe ({THEME_CUSTOM_HEADER.stat().st_size} bytes)", bg=dlg.cget("bg"), fg=COLORS["success"], font=("Segoe UI", 7)).pack(anchor="w")
 
+    # Carrossel de banners (até 15, random sem repetir seguida)
+    carousel_frame = ttk.LabelFrame(inner, text="Carrossel de Banners — até 15 imagens (aleatório sem repetir)", padding=8)
+    carousel_frame.pack(fill="x", padx=12, pady=4)
+    tk.Label(carousel_frame, text="Cada card sem banner no catálogo puxa uma imagem aleatória deste carrossel. Busca auto-preenche com tema, mas pode mudar.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
+    # busca
+    search_row = tk.Frame(carousel_frame, bg=dlg.cget("bg"))
+    search_row.pack(fill="x", pady=4)
+    tk.Label(search_row, text="Buscar:", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Segoe UI", 8)).pack(side="left")
+    # auto-preenche com nome do preset
+    _preset_queries = {"kobayashi": "Kobayashi Dragon Maid", "kobayashi_dark": "Kobayashi Dragon Maid dark", "nichijou": "Nichijou anime", "nichijou_dark": "Nichijou anime dark", "azumanga": "Azumanga Daioh", "azumanga_dark": "Azumanga Daioh dark", "k_on": "K-On anime", "k_on_dark": "K-On anime dark", "bocchi": "Bocchi the Rock", "bocchi_dark": "Bocchi the Rock dark", "minecraft": "Minecraft game", "minecraft_light": "Minecraft game light", "dark": "dark anime", "light": "light anime"}
+    carousel_search_var = tk.StringVar(value=_preset_queries.get(selected_mode.get(), "anime"))
+    carousel_entry = ttk.Entry(search_row, textvariable=carousel_search_var, width=24, font=("Segoe UI", 8))
+    carousel_entry.pack(side="left", padx=4, fill="x", expand=True)
+    def _on_preset_for_search(*args):
+        q = _preset_queries.get(selected_mode.get(), selected_mode.get())
+        carousel_search_var.set(q)
+    # atualiza busca quando preset muda
+    selected_mode.trace_add("write", lambda *_: _on_preset_for_search())
+
+    results_row = tk.Frame(carousel_frame, bg=dlg.cget("bg"))
+    results_row.pack(fill="x", pady=4)
+    # container para previews da busca
+    previews_frame = tk.Frame(carousel_frame, bg=dlg.cget("bg"))
+    previews_frame.pack(fill="x", pady=2)
+
+    # lista atual
+    current_label = tk.Label(carousel_frame, text="", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7))
+    current_label.pack(anchor="w")
+    current_list_frame = tk.Frame(carousel_frame, bg=dlg.cget("bg"))
+    current_list_frame.pack(fill="x", pady=2)
+
+    def _refresh_current_list():
+        for w in current_list_frame.winfo_children():
+            w.destroy()
+        try:
+            from app.services.banner_carousel import load_carousel
+            lst = load_carousel()
+            current_label.configure(text=f"Carrossel atual: {len(lst)}/15 imagens")
+            if not lst:
+                tk.Label(current_list_frame, text="Vazio — use Busca ou adicione manual.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7)).pack(anchor="w")
+                return
+            for idx, url in enumerate(lst):
+                row = tk.Frame(current_list_frame, bg=dlg.cget("bg"), highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+                row.pack(fill="x", pady=1)
+                # mini preview
+                thumb = tk.Label(row, bg=dlg.cget("bg"), width=12, height=4, text="…", font=("Segoe UI", 6))
+                thumb.pack(side="left", padx=4, pady=2)
+                # fetch thumb async
+                try:
+                    from app.services.image_service import fetch_image_async
+                    def _make_cb(lbl=thumb, u=url):
+                        def _cb(img):
+                            def _apply():
+                                try:
+                                    if img:
+                                        lbl.configure(image=img, text="", width=80, height=20)
+                                        lbl.image = img
+                                    else:
+                                        lbl.configure(text="×")
+                                except tk.TclError:
+                                    pass
+                            try:
+                                dlg.after(0, _apply)
+                            except tk.TclError:
+                                pass
+                        return _cb
+                    fetch_image_async(url, _make_cb(), max_size=(80, 20))
+                except Exception:
+                    pass
+                tk.Label(row, text=url[:48] + ("…" if len(url)>48 else ""), bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Consolas", 6), anchor="w").pack(side="left", fill="x", expand=True)
+                ttk.Button(row, text="✕", width=3, command=lambda u=url: (_remove_carousel(u), _refresh_current_list())).pack(side="right", padx=2)
+        except Exception as e:
+            current_label.configure(text=f"Erro: {e}")
+
+    def _remove_carousel(url):
+        try:
+            from app.services.banner_carousel import remove_from_carousel
+            remove_from_carousel(url)
+        except Exception:
+            pass
+
+    def _do_search():
+        q = carousel_search_var.get().strip() or "anime"
+        for w in previews_frame.winfo_children():
+            w.destroy()
+        tk.Label(previews_frame, text=f"Buscando '{q}'…", bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Segoe UI", 7)).pack(anchor="w")
+        try:
+            from app.services.banner_carousel import search_image_urls, add_to_carousel, load_carousel
+            urls = search_image_urls(q, count=6)
+            for w in previews_frame.winfo_children():
+                w.destroy()
+            for url in urls:
+                row = tk.Frame(previews_frame, bg=dlg.cget("bg"), highlightbackground=COLORS["border"], highlightthickness=1, bd=0)
+                row.pack(fill="x", pady=2)
+                thumb = tk.Label(row, bg=dlg.cget("bg"), width=12, height=4, text="…", font=("Segoe UI", 6))
+                thumb.pack(side="left", padx=4, pady=2)
+                try:
+                    from app.services.image_service import fetch_image_async
+                    def _make_cb2(lbl=thumb, u=url):
+                        def _cb(img):
+                            def _apply():
+                                try:
+                                    if img:
+                                        lbl.configure(image=img, text="", width=80, height=20)
+                                        lbl.image = img
+                                except tk.TclError:
+                                    pass
+                            try:
+                                dlg.after(0, _apply)
+                            except tk.TclError:
+                                pass
+                        return _cb
+                    fetch_image_async(url, _make_cb2(), max_size=(80, 20))
+                except Exception:
+                    pass
+                tk.Label(row, text=url[:50] + "…", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Consolas", 6), anchor="w").pack(side="left", fill="x", expand=True)
+                def _add(u=url):
+                    from app.services.banner_carousel import load_carousel as _lc
+                    if len(_lc()) >= 15:
+                        messagebox.showwarning("Limite", "Máximo 15 imagens no carrossel.", parent=dlg)
+                        return
+                    from app.services.banner_carousel import add_to_carousel as _add
+                    ok = _add(u)
+                    if ok:
+                        _refresh_current_list()
+                    else:
+                        messagebox.showinfo("Já existe", "Imagem já no carrossel.", parent=dlg)
+                ttk.Button(row, text="＋ Adicionar", width=10, command=_add).pack(side="right", padx=4)
+        except Exception as e:
+            for w in previews_frame.winfo_children():
+                w.destroy()
+            tk.Label(previews_frame, text=f"Erro: {e}", bg=dlg.cget("bg"), fg=COLORS["error"], font=("Segoe UI", 7)).pack(anchor="w")
+
+    ttk.Button(search_row, text="Buscar", width=8, command=_do_search).pack(side="left", padx=4)
+    ttk.Button(search_row, text="Limpar", width=6, command=lambda: [save for save in []]).pack(side="left")
+    # botão limpar carrossel
+    def _clear_carousel():
+        if messagebox.askyesno("Limpar", "Remover todas as 15 imagens do carrossel?", parent=dlg):
+            try:
+                from app.services.banner_carousel import save_carousel
+                save_carousel([])
+                _refresh_current_list()
+            except Exception as e:
+                messagebox.showerror("Erro", str(e), parent=dlg)
+    ttk.Button(search_row, text="Esvaziar", width=8, command=_clear_carousel).pack(side="left", padx=2)
+
+    _refresh_current_list()
+
     # Import/Export
-    io_frame = ttk.LabelFrame(dlg, text="Temas compartilháveis (.rhtheme)", padding=8)
+    io_frame = ttk.LabelFrame(inner, text="Temas compartilháveis (.rhtheme)", padding=8)
     io_frame.pack(fill="x", padx=12, pady=4)
     tk.Label(io_frame, text="Exporte seu tema e envie para amigos. Eles importam e aplicam. Também dá para baixar temas da comunidade via catálogo futuro.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
     io_row = tk.Frame(io_frame, bg=dlg.cget("bg"))

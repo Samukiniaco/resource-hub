@@ -116,24 +116,26 @@ def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Fr
                 txt.configure(state="disabled")
                 txt.pack(fill="x", pady=(2, 8))
 
-                # expand para changelog completo — altura auto, sem truncar (fix closure)
+                # expand para changelog completo — logo abaixo do clicado (fix closure r+entry)
                 expanded = {"open": False}
                 full_txt = None
-                def _toggle(btn=None, entry=e):
+                # captura r e entry por default arg para não usar último do loop
+                def _toggle(btn=None, entry=e, container=r):
                     nonlocal full_txt
                     if not expanded["open"]:
                         lines = entry.changelog.count("\n") + 1
                         h = max(6, min(30, lines + 1))
-                        full_txt = tk.Text(r, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=8, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"], height=h)
+                        full_txt = tk.Text(container, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=8, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"], height=h)
                         full_txt.insert("1.0", entry.changelog)
                         full_txt.configure(state="disabled")
-                        full_txt.pack(fill="x", pady=(0, 8))
+                        full_txt.pack(fill="x", pady=(8, 0), before=btn_row2)  # antes dos botões, logo abaixo do preview
                         if btn:
                             btn.configure(text="Recolher")
                         expanded["open"] = True
                     else:
                         if full_txt:
                             full_txt.destroy()
+                            full_txt = None
                         if btn:
                             btn.configure(text="Ver changelog completo")
                         expanded["open"] = False
@@ -144,7 +146,7 @@ def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Fr
                 btn_row2 = tk.Frame(r, bg=COLORS["bg"])
                 btn_row2.pack(fill="x")
                 exp_btn = ttk.Button(btn_row2, text="Ver changelog completo", style="Ghost.TButton")
-                exp_btn.configure(command=lambda b=exp_btn, entry=e: _toggle(b, entry))
+                exp_btn.configure(command=lambda b=exp_btn, entry=e, cont=r: _toggle(b, entry, cont))
                 exp_btn.pack(side="left")
 
                 def _copy_raw(ev=None, url=e.raw_url):
