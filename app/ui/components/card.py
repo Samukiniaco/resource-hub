@@ -48,7 +48,7 @@ class ResourceCard(tk.Frame):
             _bh = int(_bs.get("height", 200))
         except Exception:
             _bh = 200
-        self._banner_size = (960, _bh)
+        self._banner_size = (1280, _bh)
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
         self.banner_label.grid(row=3, column=0, sticky="ew", padx=0, pady=(0, 8))
@@ -70,7 +70,7 @@ class ResourceCard(tk.Frame):
                 try:
                     auto = get_auto_banner_tk(title, max_size=self._banner_size)
                     if auto:
-                        self.banner_label.configure(image=auto, text="", compound="center")
+                        self.banner_label.configure(image=auto, text="", compound="center", anchor="center")
                         self.banner_label.image = auto
                     else:
                         self.banner_label.grid_remove()
@@ -130,19 +130,17 @@ class ResourceCard(tk.Frame):
 
     def _load_banner(self, url: str, fallback_title: str | None = None):
         title = fallback_title or self._title_for_banner
-        bsize = getattr(self, "_banner_size", (960, 200))
+        bsize = getattr(self, "_banner_size", (1280, 200))
         def _cb(tk_img):
             def _apply():
                 try:
                     if tk_img is not None:
-                        # se for placeholder genérico e tínhamos fallback, tenta auto procedural como fallback melhor
-                        # Mas carrossel sempre retorna imagem, então ok
-                        self.banner_label.configure(image=tk_img, text="", compound="center")
+                        self.banner_label.configure(image=tk_img, text="", compound="center", anchor="center")
                         self.banner_label.image = tk_img
                     else:
                         auto = get_auto_banner_tk(title, max_size=bsize)
                         if auto:
-                            self.banner_label.configure(image=auto, text="", compound="center")
+                            self.banner_label.configure(image=auto, text="", compound="center", anchor="center")
                             self.banner_label.image = auto
                         else:
                             self.banner_label.configure(text="Banner indisponível", image="", fg=COLORS["text_muted"], font=FONTS["small"])

@@ -177,11 +177,26 @@ def get_colors() -> Dict[str, str]:
 def export_theme_file(path: Path) -> None:
     info = load_theme()
     colors = get_colors()
+    # banner settings + carrossel (o .rhtheme agora leva tudo)
+    try:
+        from app.services.image_service import get_banner_settings as _gbs
+        banner = _gbs()
+    except Exception:
+        banner = {"fit": "blur", "focal": "top", "height": 200}
+    try:
+        from app.services.banner_carousel import load_carousel as _lc
+        carousel = _lc()
+    except Exception:
+        carousel = []
     payload = {
         "format": "rhtheme",
-        "version": 1,
+        "version": 2,
         "mode": info.get("mode", "custom"),
         "colors": colors,
+        "banner_fit": banner.get("fit", "blur"),
+        "banner_focal": banner.get("focal", "top"),
+        "banner_height": int(banner.get("height", 200)),
+        "carousel": carousel,
         "meta": {"exported_from": "Resource Hub"}
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -193,6 +208,26 @@ def import_theme_file(path: Path) -> None:
         raise ValueError("Arquivo inválido: sem 'colors'")
     mode = raw.get("mode", "custom")
     clean = {k: v for k, v in colors.items() if k in DEFAULT_DARK and _is_hex(str(v))}
-    if not clean:
+    if not clean and mode not in PRESETS:
         raise ValueError("Nenhuma cor válida encontrada")
-    save_theme(mode if mode in PRESETS or mode == "custom" else "custom", clean)
+    save_theme(mode if mode in PRESETS or mode == "custom" else "custom", clean or colors)
+    # banner settings (v2)
+    try:
+        import json as _js
+        from app.config import DATA_DIR as _DD
+        _tp = _DD / "theme.json"
+        _cur = _js.loads(_tp.read_text(encoding="utf-8")) if _tp.exists() else {}
+        for k in ("banner_fit", "banner_focal", "banner_height"):
+            if k in raw:
+                _cur[k] = raw[k]
+        _tp.write_text(_js.dumps(_cur, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception:
+        pass
+    # carrossel (v2) — restaura imagens perdidas
+    try:
+        car = raw.get("carousel", [])
+        if isinstance(car, list) and car:
+            from app.services.banner_carousel import save_carousel as _sc
+            _sc([str(u) for u in car if isinstance(u, str) and u.startswith("http")])
+    except Exception:
+        pass

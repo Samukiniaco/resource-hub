@@ -404,13 +404,18 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         if not p:
             return
         try:
-            # salva preview atual temporariamente para exportar
-            from app.services.theme_service import save_theme as _save, get_colors as _get
-            # export usa cores preview
+            from app.services.banner_carousel import load_carousel as _lc2
             tmp_path = Path(p)
-            payload = {"format": "rhtheme", "version": 1, "mode": selected_mode.get(), "colors": dict(preview_colors), "meta": {"exported_from": "Resource Hub"}}
+            payload = {
+                "format": "rhtheme", "version": 2, "mode": selected_mode.get(),
+                "colors": dict(preview_colors),
+                "banner_fit": banner_fit_var.get().strip(), "banner_focal": banner_focal_var.get().strip(),
+                "banner_height": int(banner_height_var.get()),
+                "carousel": _lc2(),
+                "meta": {"exported_from": "Resource Hub"},
+            }
             tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            messagebox.showinfo("Exportado", f"Salvo em {tmp_path}\nEnvie este arquivo para aplicar em outro PC via Importar.", parent=dlg)
+            messagebox.showinfo("Exportado", f"Salvo em {tmp_path} (cores+banners+carrossel).\nEnvie este arquivo para aplicar em outro PC via Importar.", parent=dlg)
         except Exception as e:
             messagebox.showerror("Erro", str(e), parent=dlg)
     def _import():
