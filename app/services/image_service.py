@@ -64,17 +64,28 @@ def ensure_placeholder_image() -> Optional[Path]:
         return None
 
 
+def _cover_crop(img, max_size: tuple[int, int]):
+    """Redimensiona para preencher (cover) e corta o centro — banner 620x170 sem faixas."""
+    tw, th = max_size
+    w, h = img.size
+    if w == 0 or h == 0:
+        return img
+    scale = max(tw / w, th / h)
+    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+    img = img.resize((nw, nh), Image.LANCZOS)
+    left = (nw - tw) // 2
+    top = (nh - th) // 2
+    return img.crop((left, top, left + tw, top + th))
+
 def _load_image_from_path(path: Path, max_size: tuple[int, int]) -> Optional[object]:
     if not HAS_PIL:
         return None
     try:
         img = Image.open(path)
         img.load()
-        # convert to RGB/RGBA as needed
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGB")
-        # thumbnail
-        img.thumbnail(max_size, Image.LANCZOS)
+        img = _cover_crop(img, max_size)
         tk_img = ImageTk.PhotoImage(img)
         return tk_img
     except Exception as e:
@@ -146,7 +157,7 @@ def fetch_image_async(
                 img.load()
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
-                img.thumbnail(max_size, Image.LANCZOS)
+                img = _cover_crop(img, max_size)
                 tk_img = ImageTk.PhotoImage(img)
                 _photo_cache[url] = tk_img
                 callback(tk_img)

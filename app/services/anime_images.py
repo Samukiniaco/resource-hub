@@ -1,8 +1,9 @@
 """API reversa própria — anime SFW sem key, para banners.
 
 Fontes (nesta ordem):
-1. NekosAPI v4 (rating=safe, retorna url + color_dominant)
-2. Safebooru (json=1, rating general, retorna file_url/sample_url)
+1. Safebooru com tag exata da série (ex: azumanga_daioh) — mais fiel
+2. NekosAPI v4 (rating=safe, retorna url + color_dominant)
+3. Safebooru genérico (school_uniform / 1girl)
 
 Google Imagens não tem API — cole manual no carrossel.
 """
@@ -21,14 +22,13 @@ logger = get_logger(__name__)
 
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 
-# query do tema -> tags de cada fonte
 QUERY_TAGS = {
-    "kobayashi": ["maid"],
     "maid": ["maid"],
-    "nichijou": ["school_uniform"],
-    "azumanga": ["school_uniform"],
+    "kobayashi": ["maid"],
     "school": ["school_uniform"],
     "uniform": ["school_uniform"],
+    "nichijou": ["school_uniform"],
+    "azumanga": ["school_uniform"],
     "k-on": ["school_uniform"],
     "kon": ["school_uniform"],
     "bocchi": ["school_uniform"],
@@ -36,6 +36,15 @@ QUERY_TAGS = {
     "minecraft": [],
     "game": [],
 }
+
+def _series_slug(query: str) -> str:
+    """'Azumanga Daioh' -> 'azumanga_daioh' (tag exata do Safebooru)."""
+    import re
+    q = (query or "").lower().strip()
+    q = re.sub(r"[^a-z0-9]+", "_", q).strip("_")
+    for junk in ("_anime", "_light", "_dark", "_game"):
+        q = q.replace(junk, "")
+    return q.strip("_")
 
 def _rgb_to_hex(rgb) -> str | None:
     try:
@@ -60,10 +69,8 @@ def _tags_for(query: str) -> List[str]:
 
 def _nekosapi(tags: List[str], count: int) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
-    # tenta com tags, depois sem tags
     tag_param = ""
     if tags:
-        # nekosapi usa tags separadas por vírgula? testa primeira tag
         tag_param = f"&tags={quote(tags[0])}"
     for url in (
         f"https://api.nekosapi.com/v4/images/random?rating=safe&limit={count}{tag_param}",
@@ -95,27 +102,22 @@ def _nekosapi(tags: List[str], count: int) -> List[Dict[str, Any]]:
             continue
     return out
 
-def _safebooru(tags: List[str], count: int) -> List[Dict[str, Any]]:
+def _safebooru_fetch(tag_str: str, count: int) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
-    tag_str = "+".join([quote(t) for t in tags]) if tags else "1girl"
-    # pede mais para filtrar landscape depois
-    url = f"https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit={max(count*3, 10)}&tags={tag_str}"
+    url = f"https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit={max(count*3, 12)}&tags={tag_str}"
     try:
         data = _get_json(url)
-        if not isinstance(data, list):
+        if not isinstance(data, list) or not data:
             return out
         for p in data:
-            # prefere sample (menor) para banner 620x170
             file_url = p.get("sample_url") or p.get("file_url") or ""
             if not file_url.startswith("http"):
                 continue
             if p.get("rating", "s") not in ("s", "general", "safe"):
-                # safebooru rating: s=safe
                 if p.get("rating") not in ("s",):
                     continue
             w = int(p.get("width") or 0)
             h = int(p.get("height") or 0)
-            # prefere landscape para banner
             if w and h and w < h:
                 continue
             out.append({
@@ -128,25 +130,33 @@ def _safebooru(tags: List[str], count: int) -> List[Dict[str, Any]]:
             if len(out) >= count:
                 break
     except Exception as e:
-        logger.debug("safebooru failed: %s", e)
+        logger.debug("safebooru failed %s: %s", tag_str, e)
     return out[:count]
 
 def search_anime(query: str, count: int = 6) -> List[Dict[str, Any]]:
-    """Busca anime SFW landscape. Sempre retorna lista (pode ser vazia, sem stock)."""
+    """Busca anime SFW landscape. Tenta série exata primeiro."""
     tags = _tags_for(query)
+    slug = _series_slug(query)
     out: List[Dict[str, Any]] = []
-    # 1. nekosapi (já filtra safe + tem dominant color)
-    try:
-        out.extend(_nekosapi(tags, count))
-    except Exception as e:
-        logger.debug("nekosapi search failed: %s", e)
-    # 2. completa com safebooru
+    # 1. Safebooru com tag exata da série (mais fiel — ex: azumanga_daioh)
+    if slug and len(slug) >= 3:
+        try:
+            out.extend(_safebooru_fetch(quote(slug), count))
+        except Exception as e:
+            logger.debug("safebooru series failed: %s", e)
+    # 2. NekosAPI genérica (tem dominant color)
     if len(out) < count:
         try:
-            out.extend(_safebooru(tags, count - len(out)))
+            out.extend(_nekosapi(tags, count - len(out)))
+        except Exception as e:
+            logger.debug("nekosapi search failed: %s", e)
+    # 3. Safebooru genérico completa
+    if len(out) < count:
+        try:
+            gen = "+".join([quote(t) for t in tags]) if tags else "1girl"
+            out.extend(_safebooru_fetch(gen, count - len(out)))
         except Exception as e:
             logger.debug("safebooru search failed: %s", e)
-    # dedupe por url
     seen = set()
     uniq: List[Dict[str, Any]] = []
     for im in out:

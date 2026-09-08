@@ -1,4 +1,4 @@
-"""Tema local — presets anime light/dark + persistência, import/export."""
+"""Tema local — presets por cores/estilos + persistência, import/export."""
 from __future__ import annotations
 
 import json
@@ -69,33 +69,32 @@ LIGHT: Dict[str, str] = {
     "status_err": "#dc2626",
 }
 
-# Anime — paletas refinadas + dark variants (usuário pediu modo escuro para cada)
-def _dark_variant(light: Dict[str, str], accent: str, accent_hover: str, accent_press: str) -> Dict[str, str]:
+def _dark(accent: str, hover: str, press: str) -> Dict[str, str]:
     base = dict(DEFAULT_DARK)
-    base.update({"accent": accent, "accent_hover": accent_hover, "accent_press": accent_press, "accent_subtle": "#1e2a3a"})
-    # mantém bg dark mas com leve tint do tema
+    base.update({"accent": accent, "accent_hover": hover, "accent_press": press, "accent_subtle": "#1e2a3a"})
     return base
 
-# Light presets — cores mais fiéis e pastéis
-_KOBAYASHI = {**LIGHT, "accent": "#2a9d8f", "accent_hover": "#3ab09e", "accent_press": "#1f7a6e", "accent_subtle": "#dff5f0", "bg": "#fdf8f0", "bg_top": "#fffbf5", "border": "#f0e6d8"}
-_NICHIJOU  = {**LIGHT, "accent": "#f4b400", "accent_hover": "#ffca28", "accent_press": "#e6a200", "accent_subtle": "#fff8d6", "bg": "#fffef5", "bg_top": "#ffffff", "border": "#fde68a"}  # amarelo giz
-_AZUMANGA = {**LIGHT, "accent": "#e77a9a", "accent_hover": "#ee98b0", "accent_press": "#d65f82", "accent_subtle": "#fde8ef", "bg": "#fff7f9", "bg_top": "#ffffff", "border": "#fbcfe8"}  # sakura menos neon
-_K_ON     = {**LIGHT, "accent": "#c47a1a", "accent_hover": "#d98f2e", "accent_press": "#a8640f", "accent_subtle": "#fff3d6", "bg": "#fdf6ec", "bg_top": "#fffaf0", "border": "#fde68a"}  # chá/marrom
-_BOCCHI   = {**LIGHT, "accent": "#6b7cff", "accent_hover": "#8896ff", "accent_press": "#5566e0", "accent_subtle": "#ecefff", "bg": "#f8f7ff", "bg_top": "#ffffff", "border": "#ddd6fe"}  # roxo palco menos saturado
+def _light(accent: str, hover: str, press: str, subtle: str, bg: str = "#f5f5f7", top: str = "#ffffff", border: str = "#e5e5e7") -> Dict[str, str]:
+    base = dict(LIGHT)
+    base.update({"accent": accent, "accent_hover": hover, "accent_press": press, "accent_subtle": subtle, "bg": bg, "bg_top": top, "border": border})
+    return base
 
+# Temas por cores/estilos (sem anime — combine com suas imagens)
 PRESETS: Dict[str, Dict[str, str]] = {
     "dark": DEFAULT_DARK,
     "light": LIGHT,
-    "kobayashi": _KOBAYASHI,
-    "kobayashi_dark": _dark_variant(_KOBAYASHI, "#2a9d8f", "#3ab09e", "#1f7a6e"),
-    "nichijou": _NICHIJOU,
-    "nichijou_dark": _dark_variant(_NICHIJOU, "#f4b400", "#ffca28", "#e6a200"),
-    "azumanga": _AZUMANGA,
-    "azumanga_dark": _dark_variant(_AZUMANGA, "#e77a9a", "#ee98b0", "#d65f82"),
-    "k_on": _K_ON,
-    "k_on_dark": _dark_variant(_K_ON, "#c47a1a", "#d98f2e", "#a8640f"),
-    "bocchi": _BOCCHI,
-    "bocchi_dark": _dark_variant(_BOCCHI, "#6b7cff", "#8896ff", "#5566e0"),
+    "sakura": _light("#e77a9a", "#ee98b0", "#d65f82", "#fde8ef", bg="#fff7f9", border="#fbcfe8"),
+    "sakura_dark": _dark("#e77a9a", "#ee98b0", "#d65f82"),
+    "ocean": _light("#2f80ed", "#3b8bfa", "#1f6bd6", "#e8f0fe"),
+    "ocean_dark": _dark("#2f80ed", "#3b8bfa", "#1f6bd6"),
+    "forest": _light("#2a9d8f", "#3ab09e", "#1f7a6e", "#dff5f0", bg="#fdf8f0", top="#fffbf5", border="#f0e6d8"),
+    "forest_dark": _dark("#2a9d8f", "#3ab09e", "#1f7a6e"),
+    "sunset": _light("#c47a1a", "#d98f2e", "#a8640f", "#fff3d6", bg="#fdf6ec", top="#fffaf0", border="#fde68a"),
+    "sunset_dark": _dark("#c47a1a", "#d98f2e", "#a8640f"),
+    "grape": _light("#6b7cff", "#8896ff", "#5566e0", "#ecefff", bg="#f8f7ff", border="#ddd6fe"),
+    "grape_dark": _dark("#6b7cff", "#8896ff", "#5566e0"),
+    "ember": _light("#f4b400", "#ffca28", "#e6a200", "#fff8d6", bg="#fffef5", border="#fde68a"),
+    "ember_dark": _dark("#f4b400", "#ffca28", "#e6a200"),
     "minecraft": {**DEFAULT_DARK, "accent": "#3B8526", "accent_hover": "#4a9c2d", "accent_press": "#2f6a1e", "accent_subtle": "#1e2e1a", "bg": "#1e221e", "bg_top": "#252a25", "border": "#3a3d2f"},
     "minecraft_light": {**LIGHT, "accent": "#3B8526", "accent_hover": "#4a9c2d", "accent_press": "#2f6a1e", "accent_subtle": "#e8f5e3", "bg": "#f6fdf4", "bg_top": "#ffffff", "border": "#c5e0b8"},
 }
@@ -108,11 +107,9 @@ def extract_dominant_color(image_path: Path) -> str | None:
     try:
         from PIL import Image
         im = Image.open(image_path).convert("RGB")
-        # reduz para acelerar
         im = im.resize((64, 64), Image.LANCZOS)
-        # quantiza para 8 cores e pega mais frequente
         im = im.quantize(colors=8, method=Image.Quantize.MEDIANCUT)
-        palette = im.getpalette()[:24]  # 8*3
+        palette = im.getpalette()[:24]
         counts = im.getcolors(4096)
         if not counts:
             return None

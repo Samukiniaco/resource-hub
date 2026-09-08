@@ -18,16 +18,18 @@ EDITABLE_KEYS = ["accent", "bg", "bg_top", "bg_card", "border", "text_primary", 
 PRESET_LABELS = {
     "dark": "Dark (padrão)",
     "light": "Light",
-    "kobayashi": "Kobayashi 🌿 Light",
-    "kobayashi_dark": "Kobayashi 🌿 Dark",
-    "nichijou": "Nichijou ☀️ Light",
-    "nichijou_dark": "Nichijou ☀️ Dark",
-    "azumanga": "Azumanga 🌸 Light",
-    "azumanga_dark": "Azumanga 🌸 Dark",
-    "k_on": "K-On! 🎸 Light",
-    "k_on_dark": "K-On! 🎸 Dark",
-    "bocchi": "Bocchi 🎧 Light",
-    "bocchi_dark": "Bocchi 🎧 Dark",
+    "sakura": "Sakura 🌸 Light",
+    "sakura_dark": "Sakura 🌸 Dark",
+    "ocean": "Ocean 🌊 Light",
+    "ocean_dark": "Ocean 🌊 Dark",
+    "forest": "Forest 🌿 Light",
+    "forest_dark": "Forest 🌿 Dark",
+    "sunset": "Sunset ☀️ Light",
+    "sunset_dark": "Sunset ☀️ Dark",
+    "grape": "Grape 🍇 Light",
+    "grape_dark": "Grape 🍇 Dark",
+    "ember": "Ember 🔥 Light",
+    "ember_dark": "Ember 🔥 Dark",
     "minecraft": "Minecraft ⛏️ Dark",
     "minecraft_light": "Minecraft ⛏️ Light",
 }
@@ -104,70 +106,31 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
         b.pack(side="left", padx=6)
         tk.Label(row, text=preview_colors.get(key, ""), bg=dlg.cget("bg"), fg=COLORS["text_muted"], font=("Consolas", 7)).pack(side="left")
 
-    # Imagens
-    img_frame = ttk.LabelFrame(inner, text="Imagens (opcional)", padding=8)
-    img_frame.pack(fill="x", padx=12, pady=4)
-    tk.Label(img_frame, text="Header custom: data/header_bg.custom.png — use PNG/JPG 1020×88. Vazio = cor sólida.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
-    img_row = tk.Frame(img_frame, bg=dlg.cget("bg"))
-    img_row.pack(fill="x", pady=4)
-    def _choose_header():
-        p = filedialog.askopenfilename(parent=dlg, title="Escolher header", filetypes=[("Imagens", "*.png *.jpg *.jpeg *.webp"), ("Todos", "*.*")])
+    # Cor a partir de imagem (sem header fantasma — header nunca aparecia no app)
+    color_img_frame = ttk.LabelFrame(inner, text="Cor a partir de imagem", padding=8)
+    color_img_frame.pack(fill="x", padx=12, pady=4)
+    tk.Label(color_img_frame, text="Escolha qualquer imagem e puxe a cor dominante para o accent. Combine com seus banners do carrossel.", bg=dlg.cget("bg"), fg=COLORS["text_dim"], font=("Segoe UI", 7), wraplength=460, justify="left").pack(anchor="w")
+    ci_row = tk.Frame(color_img_frame, bg=dlg.cget("bg"))
+    ci_row.pack(fill="x", pady=4)
+    def _pick_color_from_image():
+        p = filedialog.askopenfilename(parent=dlg, title="Escolher imagem", filetypes=[("Imagens", "*.png *.jpg *.jpeg *.webp"), ("Todos", "*.*")])
         if not p:
             return
         try:
-            from PIL import Image
-            im = Image.open(p)
-            im.thumbnail((1020, 88), Image.LANCZOS)
-            THEME_CUSTOM_HEADER.parent.mkdir(parents=True, exist_ok=True)
-            im.save(THEME_CUSTOM_HEADER, format="PNG")
-            # extrai cor dominante para sugerir accent
-            try:
-                from app.services.theme_service import extract_dominant_color
-                dom = extract_dominant_color(THEME_CUSTOM_HEADER)
-                if dom:
-                    preview_colors["accent"] = dom
-                    _refresh_preview()
-                    messagebox.showinfo("Header", f"Header salvo em {THEME_CUSTOM_HEADER}\nCor dominante {dom} aplicada ao accent (preview). Clique Aplicar para salvar.", parent=dlg)
-                    return
-            except Exception:
-                pass
-            messagebox.showinfo("Header", f"Header salvo em {THEME_CUSTOM_HEADER}\nReinicie o app para ver (ou Aplicar tema).", parent=dlg)
-        except Exception as e:
-            try:
-                import shutil
-                shutil.copy(p, THEME_CUSTOM_HEADER)
-                messagebox.showinfo("Header", f"Copiado para {THEME_CUSTOM_HEADER}", parent=dlg)
-            except Exception as e2:
-                messagebox.showerror("Erro", str(e2), parent=dlg)
-    ttk.Button(img_row, text="Escolher header…", command=_choose_header).pack(side="left")
-    def _clear_header():
-        try:
-            THEME_CUSTOM_HEADER.unlink(missing_ok=True)
-            messagebox.showinfo("Header", "Removido. Voltará à cor sólida.", parent=dlg)
-        except Exception as e:
-            messagebox.showerror("Erro", str(e), parent=dlg)
-    ttk.Button(img_row, text="Remover", command=_clear_header).pack(side="left", padx=6)
-    def _use_dominant():
-        if not THEME_CUSTOM_HEADER.exists():
-            messagebox.showwarning("Sem imagem", "Escolha um header primeiro.", parent=dlg)
-            return
-        try:
+            from pathlib import Path as _P
             from app.services.theme_service import extract_dominant_color
-            dom = extract_dominant_color(THEME_CUSTOM_HEADER)
+            dom = extract_dominant_color(_P(p))
             if dom:
                 preview_colors["accent"] = dom
-                # calcula hover/press levemente mais claro/escuro
                 _refresh_preview()
                 selected_mode.set("custom")
                 cb.set("custom — personalizado")
-                messagebox.showinfo("Cor", f"Cor dominante {dom} aplicada ao accent.", parent=dlg)
+                messagebox.showinfo("Cor", f"Cor dominante {dom} aplicada ao accent (preview). Clique Aplicar.", parent=dlg)
             else:
                 messagebox.showwarning("Falha", "Não foi possível extrair cor.", parent=dlg)
         except Exception as e:
             messagebox.showerror("Erro", str(e), parent=dlg)
-    ttk.Button(img_row, text="Usar cor da imagem", command=_use_dominant).pack(side="left", padx=6)
-    if THEME_CUSTOM_HEADER.exists():
-        tk.Label(img_frame, text=f"✔ custom header existe ({THEME_CUSTOM_HEADER.stat().st_size} bytes)", bg=dlg.cget("bg"), fg=COLORS["success"], font=("Segoe UI", 7)).pack(anchor="w")
+    ttk.Button(ci_row, text="Puxar cor de imagem…", command=_pick_color_from_image).pack(side="left")
 
     # Carrossel de banners (até 15, random sem repetir seguida)
     carousel_frame = ttk.LabelFrame(inner, text="Carrossel de Banners — até 15 imagens (aleatório sem repetir)", padding=8)
@@ -178,7 +141,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
     search_row.pack(fill="x", pady=4)
     tk.Label(search_row, text="Buscar:", bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Segoe UI", 8)).pack(side="left")
     # auto-preenche com nome do preset
-    _preset_queries = {"kobayashi": "Kobayashi Dragon Maid", "kobayashi_dark": "Kobayashi Dragon Maid dark", "nichijou": "Nichijou anime", "nichijou_dark": "Nichijou anime dark", "azumanga": "Azumanga Daioh", "azumanga_dark": "Azumanga Daioh dark", "k_on": "K-On anime", "k_on_dark": "K-On anime dark", "bocchi": "Bocchi the Rock", "bocchi_dark": "Bocchi the Rock dark", "minecraft": "Minecraft game", "minecraft_light": "Minecraft game light", "dark": "dark anime", "light": "light anime"}
+    _preset_queries = {"kobayashi": "maid", "kobayashi_dark": "maid dark", "nichijou": "school_uniform", "nichijou_dark": "school_uniform dark", "azumanga": "azumanga_daioh", "azumanga_dark": "azumanga_daioh dark", "k_on": "school_uniform", "k_on_dark": "school_uniform dark", "bocchi": "school_uniform", "bocchi_dark": "school_uniform dark", "minecraft": "anime", "minecraft_light": "anime light", "dark": "anime", "light": "anime"}
     carousel_search_var = tk.StringVar(value=_preset_queries.get(selected_mode.get(), "anime"))
     carousel_entry = ttk.Entry(search_row, textvariable=carousel_search_var, width=24, font=("Segoe UI", 8))
     carousel_entry.pack(side="left", padx=4, fill="x", expand=True)
@@ -224,7 +187,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                             def _apply():
                                 try:
                                     if img:
-                                        lbl.configure(image=img, text="", width=80, height=20)
+                                        lbl.configure(image=img, text="", width=220, height=62)
                                         lbl.image = img
                                     else:
                                         lbl.configure(text="×")
@@ -235,7 +198,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                             except tk.TclError:
                                 pass
                         return _cb
-                    fetch_image_async(url, _make_cb(), max_size=(80, 20))
+                    fetch_image_async(url, _make_cb(), max_size=(220, 62))
                 except Exception:
                     pass
                 tk.Label(row, text=url[:48] + ("…" if len(url)>48 else ""), bg=dlg.cget("bg"), fg=COLORS["text_secondary"], font=("Consolas", 6), anchor="w").pack(side="left", fill="x", expand=True)
@@ -271,7 +234,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                         def _apply():
                             try:
                                 if img:
-                                    lbl.configure(image=img, text="", width=80, height=20)
+                                    lbl.configure(image=img, text="", width=220, height=62)
                                     lbl.image = img
                             except tk.TclError:
                                 pass
@@ -280,7 +243,7 @@ def open_theme_editor(parent: tk.Tk, on_apply=None):
                         except tk.TclError:
                             pass
                     return _cb
-                fetch_image_async(url, _make_cb2(), max_size=(80, 20))
+                fetch_image_async(url, _make_cb2(), max_size=(220, 62))
             except Exception:
                 pass
             mid = tk.Frame(row, bg=dlg.cget("bg"))
