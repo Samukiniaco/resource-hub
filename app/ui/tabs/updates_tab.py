@@ -116,16 +116,16 @@ def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Fr
                 txt.configure(state="disabled")
                 txt.pack(fill="x", pady=(2, 8))
 
-                # expand para changelog completo — altura auto, sem truncar
+                # expand para changelog completo — altura auto, sem truncar (fix closure)
                 expanded = {"open": False}
                 full_txt = None
-                def _toggle(btn=None):
+                def _toggle(btn=None, entry=e):
                     nonlocal full_txt
                     if not expanded["open"]:
-                        lines = e.changelog.count("\n") + 1
-                        h = max(6, min(30, lines + 1))  # até 30 linhas visíveis, resto rola no outer scroll
+                        lines = entry.changelog.count("\n") + 1
+                        h = max(6, min(30, lines + 1))
                         full_txt = tk.Text(r, wrap="word", bg=COLORS["bg"], fg=COLORS["text_secondary"], relief="flat", bd=0, padx=8, pady=8, font=FONTS["body"], highlightthickness=1, highlightbackground=COLORS["border"], height=h)
-                        full_txt.insert("1.0", e.changelog)
+                        full_txt.insert("1.0", entry.changelog)
                         full_txt.configure(state="disabled")
                         full_txt.pack(fill="x", pady=(0, 8))
                         if btn:
@@ -137,16 +137,14 @@ def build_updates_tab(notebook: ttk.Notebook, catalog: Catalog | None) -> ttk.Fr
                         if btn:
                             btn.configure(text="Ver changelog completo")
                         expanded["open"] = False
-                    # atualiza scroll da página
                     try:
                         sc._update_scrollregion()
                     except Exception:
                         pass
                 btn_row2 = tk.Frame(r, bg=COLORS["bg"])
                 btn_row2.pack(fill="x")
-                exp_btn = ttk.Button(btn_row2, text="Ver changelog completo", style="Ghost.TButton", command=lambda b=None: _toggle(b))
-                # corrige lambda closure
-                exp_btn.configure(command=lambda b=exp_btn: _toggle(b))
+                exp_btn = ttk.Button(btn_row2, text="Ver changelog completo", style="Ghost.TButton")
+                exp_btn.configure(command=lambda b=exp_btn, entry=e: _toggle(b, entry))
                 exp_btn.pack(side="left")
 
                 def _copy_raw(ev=None, url=e.raw_url):

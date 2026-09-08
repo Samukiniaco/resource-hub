@@ -37,7 +37,7 @@ class ResourceCard(tk.Frame):
             tk.Label(self.card, text="Sem descrição.", bg=COLORS["bg_card"], fg=COLORS["text_muted"],
                      font=FONTS["small"]).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 8))
 
-        # banner — tenta rede real, fallback procedural
+        # banner — só mostra se catalog tem URL válida; senão gera procedural local (sem picsum bizarro)
         self._title_for_banner = title
         self.banner_label = tk.Label(self.card, bg=COLORS["bg_card"], bd=0, highlightthickness=0)
         self.banner_label.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 8))
@@ -45,23 +45,16 @@ class ResourceCard(tk.Frame):
             self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
             self._load_banner(self.banner_url)
         else:
-            # puxa da internet (picsum seed por título) — real, não só procedural
+            # sem banner no catálogo → banner procedural temático (sem internet, sem foto aleatória)
             try:
-                from app.services.image_service import get_anime_image_url
-                auto_url = get_anime_image_url(title, 620, 170)
-                self.banner_label.configure(text="  Carregando banner…", fg=COLORS["text_muted"], font=FONTS["small"], anchor="w")
-                self._load_banner(auto_url, fallback_title=title)
-            except Exception:
-                # fallback procedural imediato
-                try:
-                    auto = get_auto_banner_tk(title, max_size=(620, 170))
-                    if auto:
-                        self.banner_label.configure(image=auto, text="", compound="center")
-                        self.banner_label.image = auto
-                    else:
-                        self.banner_label.grid_remove()
-                except Exception:
+                auto = get_auto_banner_tk(title, max_size=(620, 170))
+                if auto:
+                    self.banner_label.configure(image=auto, text="", compound="center")
+                    self.banner_label.image = auto
+                else:
                     self.banner_label.grid_remove()
+            except Exception:
+                self.banner_label.grid_remove()
 
         # warning
         if warning:
